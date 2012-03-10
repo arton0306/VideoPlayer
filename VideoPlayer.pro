@@ -12,11 +12,11 @@ TEMPLATE = app
 
 SOURCES += main.cpp\
         VideoPlayer.cpp \
-    LabavWorker.cpp
+        LibavWorker.cpp
 
 HEADERS  += \
     VideoPlayer.hpp \
-    LabavWorker.hpp
+    LibavWorker.hpp
 
 FORMS    += VideoPlayer.ui
 
