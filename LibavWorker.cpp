@@ -10,7 +10,7 @@ void LibavWorker::doWork()
     libav();
 }
 
-void LibavWorker::SaveFrame(AVFrame *pFrame, int width, int height, int iFrame)
+void LibavWorker::saveFrame(AVFrame *pFrame, int width, int height, int iFrame)
 {
     FILE *pFile;
     char szFilename[32];
@@ -31,6 +31,42 @@ void LibavWorker::SaveFrame(AVFrame *pFrame, int width, int height, int iFrame)
 
     // Close file
     fclose(pFile);
+}
+
+void LibavWorker::saveFrame( int aFrame )
+{
+    FILE *pFile;
+    char szFilename[32];
+
+    // Open file
+    sprintf(szFilename, "frame%d.ppm", aFrame);
+    pFile=fopen(szFilename, "wb");
+    if(pFile==NULL)
+        return;
+
+    // Write file by buffer
+    fwrite( mPpmBuffer, 1, mPpmSize, pFile );
+
+    // Close file
+    fclose( pFile );
+}
+
+void LibavWorker::fillPpmBuffer( AVFrame *pFrame, int width, int height )
+{
+    // Write ppm header
+    int const headLength = sprintf( mPpmBuffer, "P6\n%d %d\n255\n", width, height );
+
+    // Write pixel data
+    int const horizontalLineBytes = width * 3;
+    for( int rowIndex = 0; rowIndex < height; ++rowIndex )
+    {
+        memcpy( mPpmBuffer + headLength + rowIndex * horizontalLineBytes,
+                pFrame->data[0] + rowIndex * pFrame->linesize[0],
+                horizontalLineBytes );
+    }
+
+    // Write buffer size
+    mPpmSize = headLength + height * horizontalLineBytes;
 }
 
 int LibavWorker::libav()
@@ -162,10 +198,11 @@ int LibavWorker::libav()
 
                 // Save the frame to disk
                 ++i;
-                if ( 1950 <= i && i <= 1960 )
+                if ( 1900 <= i && i <= 1920 )
                 {
-                    SaveFrame( pFrameRGB, pCodecCtx->width,
-                        pCodecCtx->height, i );
+                    fillPpmBuffer( pFrameRGB, pCodecCtx->width, pCodecCtx->height );
+                    saveFrame( i );
+                    // saveFrame( pFrameRGB, pCodecCtx->width, pCodecCtx->height, i );
                 }
             }
         }
@@ -192,4 +229,14 @@ int LibavWorker::libav()
     avformat_close_input( &pFormatCtx );
 
     return 0;
+}
+
+char const * LibavWorker::getPpmBuffer() const
+{
+    return mPpmBuffer;
+}
+
+int LibavWorker::getPpmSize() const
+{
+    
 }

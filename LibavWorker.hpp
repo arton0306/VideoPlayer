@@ -26,10 +26,19 @@ signals:
     
 public slots:
     void doWork();
+    
+    char const * getPpmBuffer() const;
+    int getPpmSize() const;
 
 private:
-    void SaveFrame(AVFrame *pFrame, int width, int height, int iFrame);
+    void saveFrame(AVFrame *pFrame, int width, int height, int iFrame);
+    void saveFrame( int aFrame );
+    void fillPpmBuffer( AVFrame *pFrame, int width, int height );
     int libav();
+
+    // 100 for ppm file header, 3 for RGB, 1920 * 1680 for max screen
+    char mPpmBuffer[100+3*1920*1680];
+    int mPpmSize;
 };
 
 #endif // LABAVWORKER_H
