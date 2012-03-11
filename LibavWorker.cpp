@@ -1,4 +1,5 @@
 #include "LibavWorker.hpp"
+#include "QtSleepHacker.hpp"
 
 LibavWorker::LibavWorker(QObject *parent) :
     QObject(parent)
@@ -68,7 +69,8 @@ void LibavWorker::fillPpmBuffer( AVFrame *pFrame, int width, int height )
     // Write buffer size
     mPpmSize = headLength + height * horizontalLineBytes;
 
-    emit frameReady();
+    emit frameReady( mPpmBuffer, mPpmSize );
+    SleepThread::msleep( 33 );
 }
 
 int LibavWorker::libav()
@@ -198,14 +200,8 @@ int LibavWorker::libav()
                 // Release SwsContext
                 sws_freeContext( pConvertedSwsCtx );
 
-                // Save the frame to disk
-                ++i;
-                if ( 1900 <= i && i <= 1920 )
-                {
-                    fillPpmBuffer( pFrameRGB, pCodecCtx->width, pCodecCtx->height );
-                    saveFrame( i );
-                    // saveFrame( pFrameRGB, pCodecCtx->width, pCodecCtx->height, i );
-                }
+                // fill in our ppm buffer
+                fillPpmBuffer( pFrameRGB, pCodecCtx->width, pCodecCtx->height );
             }
         }
 

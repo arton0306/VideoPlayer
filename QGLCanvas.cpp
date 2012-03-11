@@ -10,6 +10,13 @@ void QGLCanvas::setImage(const QImage& image)
     img = image;
 }
 
+void QGLCanvas::renewFrame( uint8_t const * aPpmBuffer, int aPpmSize )
+{
+    QImage image = QImage::fromData( aPpmBuffer, aPpmSize, "PPM" );
+    setImage( image );
+    update();
+}
+
 void QGLCanvas::paintEvent(QPaintEvent*)
 {
     QPainter p(this);

@@ -11,6 +11,9 @@ public:
     QGLCanvas(QWidget* parent = NULL);
     void setImage(const QImage& image);
 
+public slots:
+    void renewFrame( uint8_t const * aPpmBuffer, int aPpmSize );
+
 protected:
     void paintEvent(QPaintEvent*);
 

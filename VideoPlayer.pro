@@ -18,7 +18,8 @@ SOURCES += main.cpp\
 HEADERS  += \
     VideoPlayer.hpp \
     LibavWorker.hpp \
-    QGLCanvas.hpp
+    QGLCanvas.hpp \
+    QtSleepHacker.hpp
 
 FORMS    += VideoPlayer.ui
 

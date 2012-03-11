@@ -4,6 +4,8 @@
 #include "ui_VideoPlayer.h"
 #include <QMainWindow>
 
+class QGLCanvas;
+
 class VideoPlayer : public QMainWindow, private Ui::VideoPlayer
 {
     Q_OBJECT
@@ -13,7 +15,7 @@ public:
     ~VideoPlayer();
     
 private:
-
+    QGLCanvas * videoCanvas;
 };
 
 #endif // VIDEOPLAYER_H

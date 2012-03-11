@@ -23,7 +23,7 @@ public:
     explicit LibavWorker(QObject *parent = 0);
     
 signals:
-    void frameReady();
+    void frameReady( uint8_t const * aPpmBuffer, int aPpmSize );
     
 public slots:
     void doWork();
