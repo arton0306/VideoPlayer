@@ -23,11 +23,12 @@ public:
     explicit LibavWorker(QObject *parent = 0);
     
 signals:
+    void frameReady();
     
 public slots:
     void doWork();
     
-    char const * getPpmBuffer() const;
+    uint8_t const * getPpmBuffer() const;
     int getPpmSize() const;
 
 private:
@@ -37,7 +38,7 @@ private:
     int libav();
 
     // 100 for ppm file header, 3 for RGB, 1920 * 1680 for max screen
-    char mPpmBuffer[100+3*1920*1680];
+    uint8_t mPpmBuffer[100+3*1920*1680];
     int mPpmSize;
 };
 

@@ -45,7 +45,7 @@ void LibavWorker::saveFrame( int aFrame )
         return;
 
     // Write file by buffer
-    fwrite( mPpmBuffer, 1, mPpmSize, pFile );
+    fwrite( (char *)mPpmBuffer, 1, mPpmSize, pFile );
 
     // Close file
     fclose( pFile );
@@ -54,7 +54,7 @@ void LibavWorker::saveFrame( int aFrame )
 void LibavWorker::fillPpmBuffer( AVFrame *pFrame, int width, int height )
 {
     // Write ppm header
-    int const headLength = sprintf( mPpmBuffer, "P6\n%d %d\n255\n", width, height );
+    int const headLength = sprintf( (char *)mPpmBuffer, "P6\n%d %d\n255\n", width, height );
 
     // Write pixel data
     int const horizontalLineBytes = width * 3;
@@ -67,6 +67,8 @@ void LibavWorker::fillPpmBuffer( AVFrame *pFrame, int width, int height )
 
     // Write buffer size
     mPpmSize = headLength + height * horizontalLineBytes;
+
+    emit frameReady();
 }
 
 int LibavWorker::libav()
@@ -98,7 +100,7 @@ int LibavWorker::libav()
     int i = 0;
 
     // Find the first video stream
-    for ( i = 0; i < pFormatCtx->nb_streams; ++i )
+    for ( i = 0; (unsigned)i < pFormatCtx->nb_streams; ++i )
     {
         if ( pFormatCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO )
         {
@@ -231,12 +233,12 @@ int LibavWorker::libav()
     return 0;
 }
 
-char const * LibavWorker::getPpmBuffer() const
+uint8_t const * LibavWorker::getPpmBuffer() const
 {
     return mPpmBuffer;
 }
 
 int LibavWorker::getPpmSize() const
 {
-    
+    return mPpmSize;
 }
