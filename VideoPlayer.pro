@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui
+QT       += core gui opengl
 
 TARGET = VideoPlayer
 TEMPLATE = app
@@ -12,11 +12,13 @@ TEMPLATE = app
 
 SOURCES += main.cpp\
         VideoPlayer.cpp \
-        LibavWorker.cpp
+        LibavWorker.cpp \
+    QGLCanvas.cpp
 
 HEADERS  += \
     VideoPlayer.hpp \
-    LibavWorker.hpp
+    LibavWorker.hpp \
+    QGLCanvas.hpp
 
 FORMS    += VideoPlayer.ui
 
