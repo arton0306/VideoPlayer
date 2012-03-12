@@ -13,16 +13,20 @@ TEMPLATE = app
 SOURCES += main.cpp\
         VideoPlayer.cpp \
         LibavWorker.cpp \
-    QGLCanvas.cpp
+    QGLCanvas.cpp \
+    PacketQueue.cpp
 
 HEADERS  += \
     VideoPlayer.hpp \
     LibavWorker.hpp \
     QGLCanvas.hpp \
-    QtSleepHacker.hpp
+    QtSleepHacker.hpp \
+    PacketQueue.hpp \
+    UINT64_C_incpp.hpp
 
 FORMS    += VideoPlayer.ui
 
 INCLUDEPATH += "$$_PRO_FILE_PWD_/libav/include/"
+INCLUDEPATH += "$$_PRO_FILE_PWD_/SDL/"
 
-LIBS += -L"$$_PRO_FILE_PWD_/libav/lib/" -lavcodec -lavdevice -lavfilter -lavformat -lavutil -lswscale
+LIBS += -L"$$_PRO_FILE_PWD_/libav/lib/"  -L"$$_PRO_FILE_PWD_/SDL/lib/" -lavcodec -lavdevice -lavfilter -lavformat -lavutil -lswscale -lSDLmain -lSDL

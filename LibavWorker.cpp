@@ -99,18 +99,30 @@ int LibavWorker::libav()
     // Declare codec context
     AVCodecContext *pCodecCtx;
     int videoStream = -1;
+    int audioStream = -1;
     int i = 0;
 
     // Find the first video stream
     for ( i = 0; (unsigned)i < pFormatCtx->nb_streams; ++i )
     {
-        if ( pFormatCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO )
+        if ( pFormatCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO && videoStream == -1 )
         {
             videoStream = i;
-            break;
+        }
+        if ( pFormatCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_AUDIO && audioStream == -1 )
+        {
+            audioStream = i;
         }
     }
+
+    // Didn't find a video stream
     if ( videoStream == -1 )
+    {
+        return -1;
+    }
+
+    // Didn't find a audio stream
+    if ( audioStream == -1 )
     {
         return -1;
     }
