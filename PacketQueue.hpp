@@ -12,13 +12,18 @@ class PacketQueue
 {
 public:
     PacketQueue();
+    void put( AVPacket * aPkt );
+    AVPacket get();
 
 private:
-    AVPacketList *first_pkt, *last_pkt;
-    int nb_packets;
-    int size;
-    SDL_mutex *mutex;
-    SDL_cond *cond;
+    typedef AVPacketList AVPacketNode;
+    void init();
+
+    AVPacketNode *mFirstPacketNode, *mLastPacketNode;
+    int mPacketsCount;
+    int mSize;
+    SDL_mutex *mMutex;
+    SDL_cond *mCond;
 };
 
 #endif // PACKETQUEUE_HPP
