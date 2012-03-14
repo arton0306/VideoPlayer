@@ -1,5 +1,6 @@
 #include "LibavWorker.hpp"
 #include "QtSleepHacker.hpp"
+#include "debug.hpp"
 
 LibavWorker::LibavWorker(QObject *parent) :
     QObject(parent)
@@ -86,7 +87,7 @@ int LibavWorker::libav()
     AVFormatContext *pFormatCtx = NULL;
 
     // Open video file
-    if ( avformat_open_input( &pFormatCtx, "video/Lelouch.mp4", NULL, NULL ) != 0 )
+    if ( avformat_open_input( &pFormatCtx, "video/ktv.mpg", NULL, NULL ) != 0 )
     {
         return -1;
     }
@@ -190,7 +191,11 @@ int LibavWorker::libav()
         if ( packet.stream_index == videoStream )
         {
             // Decode video frame
-            avcodec_decode_video2( pCodecCtx, pFrame, &frameFinished, &packet );
+            int bytesUsed = avcodec_decode_video2( pCodecCtx, pFrame, &frameFinished, &packet );
+            if ( bytesUsed != packet.size )
+            {
+                DEBUG() << bytesUsed << " " << packet.size;
+            }
 
             // Did we get a video frame?
             if ( frameFinished )
