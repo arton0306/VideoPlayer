@@ -3,8 +3,6 @@
 #include "VideoPlayer.hpp"
 #include "QGLCanvas.hpp"
 
-#include "PacketQueue.hpp"
-
 VideoPlayer::VideoPlayer(QWidget *parent)
     : QMainWindow(parent)
     , videoCanvas( NULL )
@@ -24,8 +22,6 @@ VideoPlayer::VideoPlayer(QWidget *parent)
         SIGNAL(frameReady( uint8_t const *, int )),
         videoCanvas,
         SLOT(renewFrame( uint8_t const *, int )) );
-
-    PacketQueue test;
 }
 
 VideoPlayer::~VideoPlayer()

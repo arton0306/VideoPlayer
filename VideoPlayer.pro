@@ -14,7 +14,8 @@ SOURCES += main.cpp\
         VideoPlayer.cpp \
         LibavWorker.cpp \
     QGLCanvas.cpp \
-    PacketQueue.cpp
+    PacketQueue.cpp \
+    debug.cpp
 
 HEADERS  += \
     VideoPlayer.hpp \
@@ -22,7 +23,8 @@ HEADERS  += \
     QGLCanvas.hpp \
     QtSleepHacker.hpp \
     PacketQueue.hpp \
-    UINT64_C_incpp.hpp
+    UINT64_C_incpp.hpp \
+    debug.hpp
 
 FORMS    += VideoPlayer.ui
 
