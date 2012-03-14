@@ -2,6 +2,7 @@
 #define LIBAVWORKER_HPP
 
 #include <QObject>
+#include "PacketQueue.hpp"
 #include "UINT64_C_incpp.hpp"
 extern "C"{
     #include "libavcodec/avcodec.h"
@@ -33,6 +34,7 @@ private:
     // 100 for ppm file header, 3 for RGB, 1920 * 1680 for max screen
     uint8_t mPpmBuffer[100+3*1920*1680];
     int mPpmSize;
+    PacketQueue mAudioQueue;
 };
 
 #endif // LABAVWORKER_H
