@@ -300,7 +300,7 @@ int LibavWorker::getPpmSize() const
 
 void audio_callback(void *userdata, Uint8 *stream, int len) {
 
-    AVCodecContext *aCodecCtx = (AVCodecContext *)userdata;
+    AVCodecContext *audioCodecCtx = (AVCodecContext *)userdata;
     int len1, audio_size;
 
     static uint8_t audio_buf[(AVCODEC_MAX_AUDIO_FRAME_SIZE * 3) / 2];
@@ -310,7 +310,7 @@ void audio_callback(void *userdata, Uint8 *stream, int len) {
     while(len > 0) {
         if(audio_buf_index >= audio_buf_size) {
             /* We have already sent all our data; get more */
-            audio_size = audio_decode_frame(aCodecCtx, audio_buf, sizeof(audio_buf));
+            audio_size = audio_decode_frame(audioCodecCtx, audio_buf, sizeof(audio_buf));
             if(audio_size < 0) {
                 /* If error, output silence */
                 audio_buf_size = 1024;
