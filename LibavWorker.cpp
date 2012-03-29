@@ -1,14 +1,9 @@
+#include <cassert>
 #include "LibavWorker.hpp"
 #include "QtSleepHacker.hpp"
 #include "debug.hpp"
 
-extern "C"{
-    #include "SDL/SDL.h"
-}
-
-void audio_callback(void *userdata, Uint8 *stream, int len);
 int audio_decode_frame(AVCodecContext *aCodecCtx, uint8_t *audio_buf, int buf_size);
-const int SDL_AUDIO_BUFFER_SIZE = 1024;
 
 LibavWorker::LibavWorker(QObject *parent) :
     QObject(parent)
@@ -20,7 +15,7 @@ void LibavWorker::doWork()
     libav();
 }
 
-void LibavWorker::saveFrame(AVFrame *pFrame, int width, int height, int iFrame)
+void LibavWorker::saveFrame(AVFrame *aDecodedFrame, int width, int height, int iFrame)
 {
     FILE *pFile;
     char szFilename[32];
@@ -37,7 +32,7 @@ void LibavWorker::saveFrame(AVFrame *pFrame, int width, int height, int iFrame)
 
     // Write pixel data
     for( y = 0; y < height; y++)
-        fwrite(pFrame->data[0]+y*pFrame->linesize[0], 1, width*3, pFile );
+        fwrite(aDecodedFrame->data[0]+y*aDecodedFrame->linesize[0], 1, width*3, pFile );
 
     // Close file
     fclose(pFile);
@@ -61,7 +56,7 @@ void LibavWorker::saveFrame( int aFrame )
     fclose( pFile );
 }
 
-void LibavWorker::fillPpmBuffer( AVFrame *pFrame, int width, int height )
+void LibavWorker::fillPpmBuffer( AVFrame *aDecodedFrame, int width, int height )
 {
     // Write ppm header
     int const headLength = sprintf( (char *)mPpmBuffer, "P6\n%d %d\n255\n", width, height );
@@ -71,7 +66,7 @@ void LibavWorker::fillPpmBuffer( AVFrame *pFrame, int width, int height )
     for( int rowIndex = 0; rowIndex < height; ++rowIndex )
     {
         memcpy( mPpmBuffer + headLength + rowIndex * horizontalLineBytes,
-                pFrame->data[0] + rowIndex * pFrame->linesize[0],
+                aDecodedFrame->data[0] + rowIndex * aDecodedFrame->linesize[0],
                 horizontalLineBytes );
     }
 
@@ -155,16 +150,6 @@ int LibavWorker::libav()
         return -1;
     }
 
-    // fill SDL_AudioSpec
-    SDL_AudioSpec wanted_spec;
-    wanted_spec.freq = audioCodecCtx->sample_rate;
-    wanted_spec.format = AUDIO_S16SYS;
-    wanted_spec.channels = audioCodecCtx->channels;
-    wanted_spec.silence = 0;
-    wanted_spec.samples = SDL_AUDIO_BUFFER_SIZE;
-    wanted_spec.callback = audio_callback;
-    wanted_spec.userdata = audioCodecCtx;
-
     // Open audio codec
     AVCodec * audioCodec = avcodec_find_decoder( audioCodecCtx->codec_id );
     if ( audioCodec == NULL )
@@ -179,15 +164,13 @@ int LibavWorker::libav()
         return -1;
     }
 
-    SDL_PauseAudio(0);
-
     /******************************************
                 Storing the Data
     ******************************************/
 
     // Declare frame
-    AVFrame *pFrame = avcodec_alloc_frame();
-    if ( pFrame == NULL )
+    AVFrame *decodedFrame = avcodec_alloc_frame();
+    if ( decodedFrame == NULL )
     {
         return -1;
     }
@@ -222,9 +205,10 @@ int LibavWorker::libav()
         if ( packet.stream_index == videoStream )
         {
             // Decode video frame
-            int bytesUsed = avcodec_decode_video2( videoCodecCtx, pFrame, &frameFinished, &packet );
+            int bytesUsed = avcodec_decode_video2( videoCodecCtx, decodedFrame, &frameFinished, &packet );
             if ( bytesUsed != packet.size )
             {
+                // check if one packet is corresponding to one frame
                 DEBUG() << bytesUsed << " " << packet.size;
             }
 
@@ -241,7 +225,7 @@ int LibavWorker::libav()
                     SWS_BILINEAR, NULL, NULL, NULL );
 
                 sws_scale( pConvertedSwsCtx,
-                    (const uint8_t * const *)(pFrame->data), pFrame->linesize,
+                    (const uint8_t * const *)(decodedFrame->data), decodedFrame->linesize,
                     0, videoCodecCtx->height,
                     pFrameRGB->data, pFrameRGB->linesize );
 
@@ -257,9 +241,31 @@ int LibavWorker::libav()
         }
         else if ( packet.stream_index == audioStream )
         {
-            mAudioQueue.put( &packet );
+            avcodec_get_frame_defaults( decodedFrame );
 
-            // Notice: we will free the packet in the get function
+            while ( packet.size > 0 )
+            {
+                // Decod audio frame
+                int bytesUsed = avcodec_decode_audio4( audioCodecCtx, decodedFrame, &frameFinished, &packet );
+                if ( bytesUsed < 0 )
+                {
+                    fprintf( stderr, "Error while decoding audio!\n" );
+                }
+                else
+                {
+                    if ( frameFinished )
+                    {
+                        int data_size = av_samples_get_buffer_size(NULL, audioCodecCtx->channels,
+                            decodedFrame->nb_samples,
+                            audioCodecCtx->sample_fmt, 1);
+                        appendPcmToFile( decodedFrame->data[0], data_size, "pcm.pcm" );
+                    }
+                    packet.data += bytesUsed;
+                    packet.size -= bytesUsed;
+                }
+            }
+
+            av_free_packet( &packet );
         }
         else
         {
@@ -277,7 +283,7 @@ int LibavWorker::libav()
     av_free( pFrameRGB );
 
     // Free the YUV frmae
-    av_free( pFrame );
+    av_free( decodedFrame );
 
     // Close the codec
     avcodec_close( videoCodecCtx );
@@ -298,76 +304,10 @@ int LibavWorker::getPpmSize() const
     return mPpmSize;
 }
 
-void audio_callback(void *userdata, Uint8 *stream, int len) {
-
-    AVCodecContext *audioCodecCtx = (AVCodecContext *)userdata;
-    int len1, audio_size;
-
-    static uint8_t audio_buf[(AVCODEC_MAX_AUDIO_FRAME_SIZE * 3) / 2];
-    static unsigned int audio_buf_size = 0;
-    static unsigned int audio_buf_index = 0;
-
-    while(len > 0) {
-        if(audio_buf_index >= audio_buf_size) {
-            /* We have already sent all our data; get more */
-            audio_size = audio_decode_frame(audioCodecCtx, audio_buf, sizeof(audio_buf));
-            if(audio_size < 0) {
-                /* If error, output silence */
-                audio_buf_size = 1024;
-                memset(audio_buf, 0, audio_buf_size);
-            } else {
-                audio_buf_size = audio_size;
-            }
-            audio_buf_index = 0;
-        }
-        len1 = audio_buf_size - audio_buf_index;
-        if(len1 > len)
-            len1 = len;
-        memcpy(stream, (uint8_t *)audio_buf + audio_buf_index, len1);
-        len -= len1;
-        stream += len1;
-        audio_buf_index += len1;
-    }
+void LibavWorker::appendPcmToFile( void const * aPcmBuffer, int aPcmSize, char const * aFileName )
+{
+    FILE * outfile = fopen( aFileName, "ab" );
+    assert( outfile );
+    fwrite( aPcmBuffer, 1, aPcmSize, outfile );
+    fclose( outfile );
 }
-
-int audio_decode_frame(AVCodecContext *aCodecCtx, uint8_t *audio_buf,
-        int buf_size) {
-
-    static AVPacket pkt;
-    static uint8_t *audio_pkt_data = NULL;
-    static int audio_pkt_size = 0;
-
-    int len1, data_size;
-
-    for(;;) {
-        while(audio_pkt_size > 0) {
-            data_size = buf_size;
-            len1 = avcodec_decode_audio4(aCodecCtx, (int16_t *)audio_buf, &data_size, 
-                    audio_pkt_data, audio_pkt_size);
-            if(len1 < 0) {
-                /* if error, skip frame */
-                audio_pkt_size = 0;
-                break;
-            }
-            audio_pkt_data += len1;
-            audio_pkt_size -= len1;
-            if(data_size <= 0) {
-                /* No data yet, get more frames */
-                continue;
-            }
-            /* We have data, return it and come back for more later */
-            return data_size;
-        }
-        if(pkt.data)
-            av_free_packet(&pkt);
-
-        if(quit) {
-            return -1;
-        }
-
-        pkt = mAudioQueue.get();
-        audio_pkt_data = pkt.data;
-        audio_pkt_size = pkt.size;
-    }
-}
-

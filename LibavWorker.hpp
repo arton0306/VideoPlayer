@@ -30,6 +30,7 @@ private:
     void saveFrame( int aFrame );
     void fillPpmBuffer( AVFrame *pFrame, int width, int height );
     int libav();
+    void appendPcmToFile( void const * aPcmBuffer, int aPcmSize, char const * aFileName );
 
     // 100 for ppm file header, 3 for RGB, 1920 * 1680 for max screen
     uint8_t mPpmBuffer[100+3*1920*1680];
