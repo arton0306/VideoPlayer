@@ -7,7 +7,8 @@ int main(int argc, char *argv[])
     QApplication a(argc, argv);
 
     debug::setProgramTimer();
-    debug::initDebugWindow();
+    // debug::initDebugWindow();
+    debug::initOutputFile();
     #ifdef Q_WS_WIN
         qInstallMsgHandler( debug::debugWinMsgHandler );
     #endif

@@ -15,7 +15,8 @@ SOURCES += main.cpp\
         LibavWorker.cpp \
     QGLCanvas.cpp \
     PacketQueue.cpp \
-    debug.cpp
+    debug.cpp \
+    WavOutFile.cpp
 
 HEADERS  += \
     VideoPlayer.hpp \
@@ -24,7 +25,8 @@ HEADERS  += \
     QtSleepHacker.hpp \
     PacketQueue.hpp \
     UINT64_C_incpp.hpp \
-    debug.hpp
+    debug.hpp \
+    WavOutFile.hpp
 
 FORMS    += VideoPlayer.ui
 

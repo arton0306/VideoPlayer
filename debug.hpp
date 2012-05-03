@@ -48,9 +48,10 @@
 #endif
 
 namespace debug                                              
-{                                                            
+{
     void setProgramTimer();                                  
     void initDebugWindow();                                  
+    void initOutputFile();
     QString getElapseTime();                                 
     void debugWinMsgHandler(QtMsgType type, const char *msg);
 };
