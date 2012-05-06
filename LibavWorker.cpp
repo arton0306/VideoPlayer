@@ -249,6 +249,7 @@ int LibavWorker::libav()
             avcodec_get_frame_defaults( decodedFrame );
             DEBUG() << packet.size;
             // if(av_dup_packet(&packet) < 0) {                DEBUG() << "dup";            }
+            uint8_t * const packetDataHead = packet.data;
             while ( packet.size > 0 )
             {
                 // Decod audio frame
@@ -266,9 +267,9 @@ int LibavWorker::libav()
                     DEBUG() << packet.size;
                     if ( frameFinished )
                     {
-                        //int data_size = av_samples_get_buffer_size(NULL, audioCodecCtx->channels,
-                        //    decodedFrame->nb_samples,
-                        //    audioCodecCtx->sample_fmt, 1);
+                        int data_size = av_samples_get_buffer_size(NULL, audioCodecCtx->channels,
+                            decodedFrame->nb_samples,
+                            audioCodecCtx->sample_fmt, 1);
 
                         // test msg block
                         /*
@@ -286,7 +287,7 @@ int LibavWorker::libav()
                             test++;
                         }
                         */
-                        // appendPcmToFile( decodedFrame->data[0], data_size, "pcm.pcm" );
+                        appendPcmToFile( decodedFrame->data[0], data_size, "pcm.pcm" );
                     }
                     DEBUG() << packet.size;
                     packet.data += bytesUsed;
@@ -296,6 +297,7 @@ int LibavWorker::libav()
                 }
             }
             DEBUG() << packet.size;
+            packet.data = packetDataHead;
             DEBUG() << packet.data;
             if (packet.data)
                 av_free_packet( &packet );
