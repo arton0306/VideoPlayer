@@ -3,8 +3,6 @@
 #include "QtSleepHacker.hpp"
 #include "debug.hpp"
 
-int audio_decode_frame(AVCodecContext *aCodecCtx, uint8_t *audio_buf, int buf_size);
-
 LibavWorker::LibavWorker(QObject *parent) :
     QObject(parent)
 {
@@ -94,6 +92,7 @@ int LibavWorker::libav()
     {
         return -1;
     }
+
     // Retrieve stream information
     if ( avformat_find_stream_info( pFormatCtx, NULL ) < 0 )
     {
