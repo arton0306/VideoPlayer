@@ -245,63 +245,36 @@ int LibavWorker::libav()
         }
         else if ( packet.stream_index == audioStream )
         {
-            DEBUG() << packet.size;
             avcodec_get_frame_defaults( decodedFrame );
-            DEBUG() << packet.size;
-            // if(av_dup_packet(&packet) < 0) {                DEBUG() << "dup";            }
             uint8_t * const packetDataHead = packet.data;
             while ( packet.size > 0 )
             {
                 // Decod audio frame
-                DEBUG() << packet.size;
                 int bytesUsed = avcodec_decode_audio4( audioCodecCtx, decodedFrame, &frameFinished, &packet );
-                DEBUG() << packet.size;
                 if ( bytesUsed < 0 )
                 {
-                    DEBUG() << packet.size;
                     fprintf( stderr, "Error while decoding audio!\n" );
                     assert( true );
                 }
                 else
                 {
-                    DEBUG() << packet.size;
                     if ( frameFinished )
                     {
                         int data_size = av_samples_get_buffer_size(NULL, audioCodecCtx->channels,
                             decodedFrame->nb_samples,
                             audioCodecCtx->sample_fmt, 1);
 
-                        // test msg block
-                        /*
-                        {
-                            static int test = 5;
-                            if ( test == 5 )
-                            {
-                                FILE * f = fopen( "pcminfo.txt", "w");
-                                fprintf( f, "channels %d \n", audioCodecCtx->channels );
-                                fprintf( f, "sample numbers %d \n", decodedFrame->nb_samples );
-                                fprintf( f, "sample foramt %d \n", audioCodecCtx->sample_fmt );
-                                fprintf( f, "sample rate %d \n", audioCodecCtx->sample_rate );
-                                fflush( f );
-                            }
-                            test++;
-                        }
-                        */
                         appendPcmToFile( decodedFrame->data[0], data_size, "pcm.pcm" );
                     }
-                    DEBUG() << packet.size;
                     packet.data += bytesUsed;
-                    DEBUG() << packet.size;
                     packet.size -= bytesUsed;
-                    DEBUG() << packet.size;
                 }
             }
-            DEBUG() << packet.size;
             packet.data = packetDataHead;
-            DEBUG() << packet.data;
             if (packet.data)
+            {
                 av_free_packet( &packet );
-            DEBUG() << packet.size;
+            }
         }
         else
         {
