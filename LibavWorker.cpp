@@ -149,7 +149,7 @@ int LibavWorker::libav()
         return -1;
     }
 
-    // Open audio codec
+    // Find the decoder for the audio stream
     AVCodec * audioCodec = avcodec_find_decoder( audioCodecCtx->codec_id );
     if ( audioCodec == NULL )
     {
@@ -295,6 +295,7 @@ int LibavWorker::libav()
 
     // Close the codec
     avcodec_close( videoCodecCtx );
+    avcodec_close( audioCodecCtx );
 
     // Close format context
     avformat_close_input( &pFormatCtx );
