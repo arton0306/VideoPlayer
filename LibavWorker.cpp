@@ -42,7 +42,7 @@ void LibavWorker::saveFrame( int aFrame )
     char szFilename[32];
 
     // Open file
-    sprintf(szFilename, "frame%d.ppm", aFrame);
+    sprintf(szFilename, "frame%05d.ppm", aFrame);
     pFile=fopen(szFilename, "wb");
     if(pFile==NULL)
         return;
@@ -197,16 +197,13 @@ int LibavWorker::libav()
     int frameFinished;
     AVPacket packet;
 
-    i = 0;
+    int frameIndex = 0;
     while ( av_read_frame( pFormatCtx, &packet ) >= 0 )
     {
+
         // Is this packet from the video stream?
         if ( packet.stream_index == videoStream )
         {
-            // Dump pts and dts for debug
-            //static int uuu =5;
-            //DEBUG() << "PTS:" << packet.pts << "     DTS:" << packet.dts << " @ " << av_q2d(pFormatCtx->streams[videoStream]->time_base) << packet.pts * av_q2d(pFormatCtx->streams[videoStream]->time_base);
-
             // Decode video frame
             int bytesUsed = avcodec_decode_video2( videoCodecCtx, decodedFrame, &frameFinished, &packet );
             if ( bytesUsed != packet.size )
@@ -237,6 +234,11 @@ int LibavWorker::libav()
 
                 // fill in our ppm buffer
                 fillPpmBuffer( pFrameRGB, videoCodecCtx->width, videoCodecCtx->height );
+
+                // Dump pts and dts for debug
+                ++frameIndex;
+                //saveFrame( frameIndex );
+                DEBUG() << "frame index:" << frameIndex << "     PTS:" << packet.pts << "     DTS:" << packet.dts << " @ " << av_q2d(pFormatCtx->streams[videoStream]->time_base) << packet.pts * av_q2d(pFormatCtx->streams[videoStream]->time_base);
             }
 
             // Free the packet that was allocated by av_read_frame
