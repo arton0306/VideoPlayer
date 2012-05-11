@@ -13,29 +13,6 @@ void LibavWorker::doWork()
     libav();
 }
 
-void LibavWorker::saveFrame(AVFrame *aDecodedFrame, int width, int height, int iFrame)
-{
-    FILE *pFile;
-    char szFilename[32];
-    int  y;
-
-    // Open file
-    sprintf(szFilename, "frame%d.ppm", iFrame);
-    pFile=fopen(szFilename, "wb");
-    if(pFile==NULL)
-        return;
-
-    // Write header
-    fprintf( pFile, "P6\n%d %d\n255\n", width, height );
-
-    // Write pixel data
-    for( y = 0; y < height; y++)
-        fwrite(aDecodedFrame->data[0]+y*aDecodedFrame->linesize[0], 1, width*3, pFile );
-
-    // Close file
-    fclose(pFile);
-}
-
 void LibavWorker::saveFrame( int aFrame )
 {
     FILE *pFile;
@@ -197,7 +174,8 @@ int LibavWorker::libav()
     int frameFinished;
     AVPacket packet;
 
-    int frameIndex = 0;
+    int videoFrameIndex = 0;
+    int audioFrameIndex = 0;
     while ( av_read_frame( pFormatCtx, &packet ) >= 0 )
     {
 
@@ -236,9 +214,9 @@ int LibavWorker::libav()
                 fillPpmBuffer( pFrameRGB, videoCodecCtx->width, videoCodecCtx->height );
 
                 // Dump pts and dts for debug
-                ++frameIndex;
-                //saveFrame( frameIndex );
-                DEBUG() << "frame index:" << frameIndex << "     PTS:" << packet.pts << "     DTS:" << packet.dts << " @ " << av_q2d(pFormatCtx->streams[videoStream]->time_base) << packet.pts * av_q2d(pFormatCtx->streams[videoStream]->time_base);
+                ++videoFrameIndex;
+                //saveFrame( videoFrameIndex );
+                DEBUG() << "frame index:" << videoFrameIndex << "     PTS:" << packet.pts << "     DTS:" << packet.dts << " @ " << av_q2d(pFormatCtx->streams[videoStream]->time_base) << packet.pts * av_q2d(pFormatCtx->streams[videoStream]->time_base);
             }
 
             // Free the packet that was allocated by av_read_frame
@@ -266,6 +244,8 @@ int LibavWorker::libav()
                             audioCodecCtx->sample_fmt, 1);
 
                         appendPcmToFile( decodedFrame->data[0], data_size, "pcm.pcm" );
+                        ++audioFrameIndex;
+                        DEBUG() << "audio index:" << audioFrameIndex << "     PTS:" << packet.pts << "     time:" << av_q2d(pFormatCtx->streams[audioStream]->time_base) * packet.pts;
                     }
                     packet.data += bytesUsed;
                     packet.size -= bytesUsed;
