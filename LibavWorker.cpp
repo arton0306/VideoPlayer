@@ -3,6 +3,8 @@
 #include "QtSleepHacker.hpp"
 #include "debug.hpp"
 
+using namespace std;
+
 LibavWorker::LibavWorker(QObject *parent) :
     QObject(parent)
 {
@@ -10,7 +12,7 @@ LibavWorker::LibavWorker(QObject *parent) :
 
 void LibavWorker::doWork()
 {
-    libav();
+    decodeAudioVideo();
 }
 
 void LibavWorker::saveFrame( int aFrame )
@@ -52,93 +54,90 @@ void LibavWorker::fillPpmBuffer( AVFrame *aDecodedFrame, int width, int height )
     SleepThread::msleep( 33 );
 }
 
-int LibavWorker::libav()
+void LibavWorker::setFileName( string aFileName )
 {
-    /******************************************
-                Opening the file
-    ******************************************/
+    mFileName = aFileName;
+}
+
+int LibavWorker::readHeader( AVFormatContext ** aFormatCtx )
+{
+    if ( avformat_open_input( aFormatCtx, mFileName.c_str(), NULL, NULL ) != 0 )
+    {
+        assert( false );
+        return -1;
+    }
+    else
+    {
+        return 1;
+    }
+}
+
+int LibavWorker::retrieveStreamInfo( AVFormatContext * aFormatCtx )
+{
+    if ( avformat_find_stream_info( aFormatCtx, NULL ) < 0 )
+    {
+        assert( false );
+        return -1;
+    }
+    else
+    {
+        return 1;
+    }
+}
+
+int LibavWorker::getStreamIndex( AVFormatContext * aFormatCtx, AVMediaType aMediaType )
+{
+    for ( unsigned streamIndex = 0; streamIndex < aFormatCtx->nb_streams; ++streamIndex )
+    {
+        if ( aFormatCtx->streams[streamIndex]->codec->codec_type == aMediaType )
+        {
+            return streamIndex;
+        }
+    }
+    return -1;
+}
+
+AVCodecContext * LibavWorker::getCodecCtx( AVFormatContext * aFormatCtx, int aStreamIndex )
+{
+    AVCodecContext * codecCtx = aFormatCtx->streams[aStreamIndex]->codec;
+    AVCodec * codec = avcodec_find_decoder( codecCtx->codec_id );
+    if ( codec == NULL )
+    {
+        assert( false );
+    }
+
+    if ( avcodec_open2( codecCtx, codec, NULL ) < 0 )
+    {
+        assert( false );
+    }
+
+    return codecCtx;
+}
+
+int LibavWorker::decodeAudioVideo()
+{
+    // set file name
+    setFileName( "video/Lelouch.mp4" );
 
     // Register all codec
     av_register_all();
 
-    // Declare format context
-    AVFormatContext *pFormatCtx = NULL;
+    // Declare a decode context
+    AVFormatContext * formatCtx = NULL;
 
-    // Open video file
-    if ( avformat_open_input( &pFormatCtx, "video/Lelouch.mp4", NULL, NULL ) != 0 )
-    {
-        return -1;
-    }
+    // readHeader
+    readHeader( &formatCtx );
 
     // Retrieve stream information
-    if ( avformat_find_stream_info( pFormatCtx, NULL ) < 0 )
-    {
-        return -1;
-    }
+    retrieveStreamInfo( formatCtx );
 
-    // Declare codec context
-    AVCodecContext *videoCodecCtx;
-    AVCodecContext *audioCodecCtx;
-    int videoStream = -1;
-    int audioStream = -1;
-    int i = 0;
+    // Get video/audio stream index
+    int const videoStreamIndex = getStreamIndex( formatCtx, AVMEDIA_TYPE_VIDEO );
+    int const audioStreamIndex = getStreamIndex( formatCtx, AVMEDIA_TYPE_AUDIO );
 
-    // Find the first video stream
-    for ( i = 0; (unsigned)i < pFormatCtx->nb_streams; ++i )
-    {
-        if ( pFormatCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO && videoStream == -1 )
-        {
-            videoStream = i;
-        }
-        if ( pFormatCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_AUDIO && audioStream == -1 )
-        {
-            audioStream = i;
-        }
-    }
-
-    // Didn't find a video stream
-    if ( videoStream == -1 )
-    {
-        return -1;
-    }
-
-    // Didn't find a audio stream
-    if ( audioStream == -1 )
-    {
-        return -1;
-    }
-
-    // Get a pointer to the codec context for the video stream
-    videoCodecCtx = pFormatCtx->streams[videoStream]->codec;
-    audioCodecCtx = pFormatCtx->streams[audioStream]->codec;
-
-    // Find the decoder for the video stream
-    AVCodec * videoCodec = avcodec_find_decoder( videoCodecCtx->codec_id );
-    if ( videoCodec == NULL )
-    {
-        fprintf( stderr, "Unsupported video codec!\n" );
-        return -1;
-    }
-
-    // Open video codec
-    if ( avcodec_open2( videoCodecCtx, videoCodec, NULL ) < 0 )
-    {
-        return -1;
-    }
-
-    // Find the decoder for the audio stream
-    AVCodec * audioCodec = avcodec_find_decoder( audioCodecCtx->codec_id );
-    if ( audioCodec == NULL )
-    {
-        fprintf( stderr, "Unsupported audio codec!\n" );
-        return -1;
-    }
-
-    // Open video codec
-    if ( avcodec_open2( audioCodecCtx, audioCodec, NULL ) < 0 )
-    {
-        return -1;
-    }
+    // Set video/audio decoder
+    AVCodecContext * videoCodecCtx = getCodecCtx( formatCtx, videoStreamIndex );
+    AVCodecContext * audioCodecCtx = getCodecCtx( formatCtx, audioStreamIndex );
 
     /******************************************
                 Storing the Data
@@ -176,11 +175,11 @@ int LibavWorker::libav()
 
     int videoFrameIndex = 0;
     int audioFrameIndex = 0;
-    while ( av_read_frame( pFormatCtx, &packet ) >= 0 )
+    while ( av_read_frame( formatCtx, &packet ) >= 0 )
     {
 
         // Is this packet from the video stream?
-        if ( packet.stream_index == videoStream )
+        if ( packet.stream_index == videoStreamIndex )
         {
             // Decode video frame
             int bytesUsed = avcodec_decode_video2( videoCodecCtx, decodedFrame, &frameFinished, &packet );
@@ -216,13 +215,13 @@ int LibavWorker::libav()
                 // Dump pts and dts for debug
                 ++videoFrameIndex;
                 //saveFrame( videoFrameIndex );
-                DEBUG() << "frame index:" << videoFrameIndex << "     PTS:" << packet.pts << "     DTS:" << packet.dts << " @ " << av_q2d(pFormatCtx->streams[videoStream]->time_base) << packet.pts * av_q2d(pFormatCtx->streams[videoStream]->time_base);
+                DEBUG() << "frame index:" << videoFrameIndex << "     PTS:" << packet.pts << "     DTS:" << packet.dts << " @ " << av_q2d(formatCtx->streams[videoStreamIndex]->time_base) << packet.pts * av_q2d(formatCtx->streams[videoStreamIndex]->time_base);
             }
 
             // Free the packet that was allocated by av_read_frame
             av_free_packet( &packet );
         }
-        else if ( packet.stream_index == audioStream )
+        else if ( packet.stream_index == audioStreamIndex )
         {
             avcodec_get_frame_defaults( decodedFrame );
             uint8_t * const packetDataHead = packet.data;
@@ -245,7 +244,7 @@ int LibavWorker::libav()
 
                         appendPcmToFile( decodedFrame->data[0], data_size, "pcm.pcm" );
                         ++audioFrameIndex;
-                        DEBUG() << "audio index:" << audioFrameIndex << "     PTS:" << packet.pts << "     time:" << av_q2d(pFormatCtx->streams[audioStream]->time_base) * packet.pts;
+                        DEBUG() << "audio index:" << audioFrameIndex << "     PTS:" << packet.pts << "     time:" << av_q2d(formatCtx->streams[audioStreamIndex]->time_base) * packet.pts;
                     }
                     packet.data += bytesUsed;
                     packet.size -= bytesUsed;
@@ -280,7 +279,7 @@ int LibavWorker::libav()
     avcodec_close( audioCodecCtx );
 
     // Close format context
-    avformat_close_input( &pFormatCtx );
+    avformat_close_input( &formatCtx );
 
     return 0;
 }
