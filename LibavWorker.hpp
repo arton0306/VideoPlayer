@@ -21,8 +21,7 @@ signals:
     void frameReady( uint8_t const * aPpmBuffer, int aPpmSize );
 
 public slots:
-    void doWork();
-
+    void decodeAudioVideo();
     uint8_t const * getPpmBuffer() const;
     int getPpmSize() const;
 
@@ -31,7 +30,6 @@ private:
     void fillPpmBuffer( AVFrame *pFrame, int width, int height );
     void appendPcmToFile( void const * aPcmBuffer, int aPcmSize, char const * aFileName );
 
-    int decodeAudioVideo();
     void setFileName( std::string aFileName );
     int readHeader( AVFormatContext ** aFormatCtx );
     int retrieveStreamInfo( AVFormatContext * aFormatCtx );

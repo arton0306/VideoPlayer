@@ -16,7 +16,7 @@ VideoPlayer::VideoPlayer(QWidget *parent)
     LibavWorker * libavWorker = new LibavWorker;
     libavWorker->moveToThread( libavThread );
     libavThread->start();
-    QMetaObject::invokeMethod( libavWorker, "doWork", Qt::QueuedConnection );
+    QMetaObject::invokeMethod( libavWorker, "decodeAudioVideo", Qt::QueuedConnection );
 
     connect( libavWorker,
         SIGNAL(frameReady( uint8_t const *, int )),

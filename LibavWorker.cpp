@@ -10,11 +10,6 @@ LibavWorker::LibavWorker(QObject *parent) :
 {
 }
 
-void LibavWorker::doWork()
-{
-    decodeAudioVideo();
-}
-
 void LibavWorker::saveFrame( int aFrame )
 {
     FILE *pFile;
@@ -114,7 +109,7 @@ AVCodecContext * LibavWorker::getCodecCtx( AVFormatContext * aFormatCtx, int aSt
     return codecCtx;
 }
 
-int LibavWorker::decodeAudioVideo()
+void LibavWorker::decodeAudioVideo()
 {
     /******************************************
                     Codec Init
@@ -256,8 +251,6 @@ int LibavWorker::decodeAudioVideo()
 
     // Close format context
     avformat_close_input( &formatCtx );
-
-    return 0;
 }
 
 void LibavWorker::convertToRGBFrame( AVCodecContext * videoCodecCtx, AVFrame * decodedFrame, AVFrame * pFrameRGB )
