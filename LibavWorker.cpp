@@ -116,6 +116,9 @@ AVCodecContext * LibavWorker::getCodecCtx( AVFormatContext * aFormatCtx, int aSt
 
 int LibavWorker::decodeAudioVideo()
 {
+    /******************************************
+                    Codec Init
+    ******************************************/
     // set file name
     setFileName( "video/Lelouch.mp4" );
 
@@ -140,26 +143,16 @@ int LibavWorker::decodeAudioVideo()
     AVCodecContext * audioCodecCtx = getCodecCtx( formatCtx, audioStreamIndex );
 
     /******************************************
-                Storing the Data
+                Frame & Buffer Init
     ******************************************/
 
     // Declare frame
     AVFrame *decodedFrame = avcodec_alloc_frame();
-    if ( decodedFrame == NULL )
-    {
-        return -1;
-    }
     AVFrame *pFrameRGB = avcodec_alloc_frame();
-    if ( pFrameRGB == NULL )
-    {
-        return -1;
-    }
-
-    // Determine required buffer size and allocate buffer
-    int const numBytes = avpicture_get_size( PIX_FMT_RGB24, videoCodecCtx->width, videoCodecCtx->height );
+    assert( decodedFrame != NULL && pFrameRGB != NULL );
 
     // Create a buffer for converted frame
-    uint8_t * buffer = (uint8_t *)av_malloc( numBytes * sizeof( uint8_t ) );
+    uint8_t * buffer = (uint8_t *)av_malloc( avpicture_get_size( PIX_FMT_RGB24, videoCodecCtx->width, videoCodecCtx->height ) );
 
     // Assign appropriate parts of buffer to image planes in pFrameRGB
     // Note that pFrameRGB is an AVFrame, but AVFrame is a superset
