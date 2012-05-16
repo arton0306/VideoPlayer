@@ -37,6 +37,7 @@ private:
     int retrieveStreamInfo( AVFormatContext * aFormatCtx );
     int getStreamIndex( AVFormatContext * aFormatCtx, AVMediaType aMediaType );
     AVCodecContext * getCodecCtx( AVFormatContext * aFormatCtx, int aStreamIndex );
+    void convertToRGBFrame( AVCodecContext * videoCodecCtx, AVFrame * decodedFrame, AVFrame * pFrameRGB );
 
     std::string mFileName;
 

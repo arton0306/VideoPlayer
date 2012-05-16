@@ -170,7 +170,6 @@ int LibavWorker::decodeAudioVideo()
     int audioFrameIndex = 0;
     while ( av_read_frame( formatCtx, &packet ) >= 0 )
     {
-
         // Is this packet from the video stream?
         if ( packet.stream_index == videoStreamIndex )
         {
@@ -185,29 +184,13 @@ int LibavWorker::decodeAudioVideo()
             // Did we get a video frame?
             if ( frameFinished )
             {
-                // Declare SwsContext
-                struct SwsContext *pConvertedSwsCtx = NULL;
-
-                // Convert the image from its native format to RGB
-                pConvertedSwsCtx = sws_getContext(
-                    videoCodecCtx->width, videoCodecCtx->height, videoCodecCtx->pix_fmt,
-                    videoCodecCtx->width, videoCodecCtx->height, PIX_FMT_RGB24,
-                    SWS_BILINEAR, NULL, NULL, NULL );
-
-                sws_scale( pConvertedSwsCtx,
-                    (const uint8_t * const *)(decodedFrame->data), decodedFrame->linesize,
-                    0, videoCodecCtx->height,
-                    pFrameRGB->data, pFrameRGB->linesize );
-
-                // Release SwsContext
-                sws_freeContext( pConvertedSwsCtx );
+                convertToRGBFrame( videoCodecCtx, decodedFrame, pFrameRGB );
 
                 // fill in our ppm buffer
                 fillPpmBuffer( pFrameRGB, videoCodecCtx->width, videoCodecCtx->height );
 
                 // Dump pts and dts for debug
                 ++videoFrameIndex;
-                //saveFrame( videoFrameIndex );
                 DEBUG() << "frame index:" << videoFrameIndex << "     PTS:" << packet.pts << "     DTS:" << packet.dts << " @ " << av_q2d(formatCtx->streams[videoStreamIndex]->time_base) << packet.pts * av_q2d(formatCtx->streams[videoStreamIndex]->time_base);
             }
 
@@ -275,6 +258,26 @@ int LibavWorker::decodeAudioVideo()
     avformat_close_input( &formatCtx );
 
     return 0;
+}
+
+void LibavWorker::convertToRGBFrame( AVCodecContext * videoCodecCtx, AVFrame * decodedFrame, AVFrame * pFrameRGB )
+{
+    // Declare SwsContext
+    struct SwsContext *pConvertedSwsCtx = NULL;
+
+    // Convert the image from its native format to RGB
+    pConvertedSwsCtx = sws_getContext(
+        videoCodecCtx->width, videoCodecCtx->height, videoCodecCtx->pix_fmt,
+        videoCodecCtx->width, videoCodecCtx->height, PIX_FMT_RGB24,
+        SWS_BILINEAR, NULL, NULL, NULL );
+
+    sws_scale( pConvertedSwsCtx,
+        (const uint8_t * const *)(decodedFrame->data), decodedFrame->linesize,
+        0, videoCodecCtx->height,
+        pFrameRGB->data, pFrameRGB->linesize );
+
+    // Release SwsContext
+    sws_freeContext( pConvertedSwsCtx );
 }
 
 uint8_t const * LibavWorker::getPpmBuffer() const
