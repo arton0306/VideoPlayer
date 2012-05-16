@@ -1,4 +1,5 @@
 #include <QThread>
+#include <cassert>
 #include "LibavWorker.hpp"
 #include "VideoPlayer.hpp"
 #include "QGLCanvas.hpp"
@@ -16,7 +17,8 @@ VideoPlayer::VideoPlayer(QWidget *parent)
     LibavWorker * libavWorker = new LibavWorker;
     libavWorker->moveToThread( libavThread );
     libavThread->start();
-    QMetaObject::invokeMethod( libavWorker, "decodeAudioVideo", Qt::QueuedConnection );
+    QMetaObject::invokeMethod( libavWorker, "decodeAudioVideo", Qt::QueuedConnection,
+        Q_ARG(QString, "video/Lelouch.mp4") );
 
     connect( libavWorker,
         SIGNAL(frameReady( uint8_t const *, int )),

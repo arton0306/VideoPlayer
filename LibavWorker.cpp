@@ -49,14 +49,14 @@ void LibavWorker::fillPpmBuffer( AVFrame *aDecodedFrame, int width, int height )
     SleepThread::msleep( 33 );
 }
 
-void LibavWorker::setFileName( string aFileName )
+void LibavWorker::setFileName( QString aFileName )
 {
     mFileName = aFileName;
 }
 
 int LibavWorker::readHeader( AVFormatContext ** aFormatCtx )
 {
-    if ( avformat_open_input( aFormatCtx, mFileName.c_str(), NULL, NULL ) != 0 )
+    if ( avformat_open_input( aFormatCtx, mFileName.toStdString().c_str(), NULL, NULL ) != 0 )
     {
         assert( false );
         return -1;
@@ -109,13 +109,13 @@ AVCodecContext * LibavWorker::getCodecCtx( AVFormatContext * aFormatCtx, int aSt
     return codecCtx;
 }
 
-void LibavWorker::decodeAudioVideo()
+void LibavWorker::decodeAudioVideo( QString aFileName )
 {
     /******************************************
                     Codec Init
     ******************************************/
     // set file name
-    setFileName( "video/Lelouch.mp4" );
+    setFileName( aFileName );
 
     // Register all codec
     av_register_all();
