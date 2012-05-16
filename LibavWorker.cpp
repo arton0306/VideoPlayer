@@ -46,7 +46,7 @@ void LibavWorker::fillPpmBuffer( AVFrame *aDecodedFrame, int width, int height )
     mPpmSize = headLength + height * horizontalLineBytes;
 
     emit frameReady( mPpmBuffer, mPpmSize );
-    SleepThread::msleep( 33 );
+    SleepThread::msleep( 22 );
 }
 
 void LibavWorker::setFileName( QString aFileName )
@@ -203,7 +203,7 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
                 if ( bytesUsed < 0 )
                 {
                     fprintf( stderr, "Error while decoding audio!\n" );
-                    assert( true );
+                    assert( false );
                 }
                 else
                 {
@@ -213,7 +213,7 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
                             decodedFrame->nb_samples,
                             audioCodecCtx->sample_fmt, 1);
 
-                        appendPcmToFile( decodedFrame->data[0], data_size, "pcm.pcm" );
+                        // appendPcmToFile( decodedFrame->data[0], data_size, "pcm.pcm" ); // this will spend lots time, which will cause the delay in video
                         ++audioFrameIndex;
                         DEBUG() << "audio index:" << audioFrameIndex << "     PTS:" << packet.pts << "     time:" << av_q2d(formatCtx->streams[audioStreamIndex]->time_base) * packet.pts;
                     }
@@ -283,6 +283,7 @@ int LibavWorker::getPpmSize() const
     return mPpmSize;
 }
 
+// this will spend lots time, which will cause the delay in video
 void LibavWorker::appendPcmToFile( void const * aPcmBuffer, int aPcmSize, char const * aFileName )
 {
     FILE * outfile = fopen( aFileName, "ab" );
