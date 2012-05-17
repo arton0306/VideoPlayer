@@ -163,8 +163,12 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
 
     int videoFrameIndex = 0;
     int audioFrameIndex = 0;
+    int packetIndex = 0;
+    DEBUG() << "videoStreamIndex:" << videoStreamIndex << "    audioStreamIndex:" << audioStreamIndex;
     while ( av_read_frame( formatCtx, &packet ) >= 0 )
     {
+        ++packetIndex;
+
         // Is this packet from the video stream?
         if ( packet.stream_index == videoStreamIndex )
         {
@@ -186,7 +190,11 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
 
                 // Dump pts and dts for debug
                 ++videoFrameIndex;
-                DEBUG() << "frame index:" << videoFrameIndex << "     PTS:" << packet.pts << "     DTS:" << packet.dts << " @ " << av_q2d(formatCtx->streams[videoStreamIndex]->time_base) << packet.pts * av_q2d(formatCtx->streams[videoStreamIndex]->time_base);
+                DEBUG() << "p ndx:" << packetIndex << "    vf ndx:" << videoFrameIndex << "     PTS:" << packet.pts << "     DTS:" << packet.dts << " TimeBase:" << av_q2d(formatCtx->streams[videoStreamIndex]->time_base) << " *dts: " << packet.dts * av_q2d(formatCtx->streams[videoStreamIndex]->time_base);
+            }
+            else
+            {
+                DEBUG() << "p ndx:" << packetIndex << "    (unfinished video packet)";
             }
 
             // Free the packet that was allocated by av_read_frame
@@ -215,7 +223,11 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
 
                         // appendPcmToFile( decodedFrame->data[0], data_size, "pcm.pcm" ); // this will spend lots time, which will cause the delay in video
                         ++audioFrameIndex;
-                        DEBUG() << "audio index:" << audioFrameIndex << "     PTS:" << packet.pts << "     time:" << av_q2d(formatCtx->streams[audioStreamIndex]->time_base) * packet.pts;
+                        DEBUG() << "p ndx:" << packetIndex << "     af ndx:" << audioFrameIndex << "     PTS:" << packet.pts << "     DTS:" << packet.dts << " TimeBase:" << av_q2d(formatCtx->streams[audioStreamIndex]->time_base) << " *dts:" << av_q2d(formatCtx->streams[audioStreamIndex]->time_base) * packet.pts;
+                    }
+                    else
+                    {
+                        DEBUG() << "p ndx:" << packetIndex << "    (unfinished audio packet)";
                     }
                     packet.data += bytesUsed;
                     packet.size -= bytesUsed;
@@ -231,6 +243,7 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
         {
             // Free the packet that was allocated by av_read_frame
             av_free_packet( &packet );
+            DEBUG() << "p ndx:" << packetIndex << "     packet.stream_index:" << packet.stream_index;
         }
     }
 
