@@ -7,17 +7,24 @@ extern "C"{
 }
 
 #include <queue>
+#include <vector>
 
 class FrameFifo
 {
 public:
+    typedef std::vector<char> FrameBuffer;
+
     FrameFifo();
-    void put( AVPacket * aPkt );
-    AVPacket get();
+    void push( FrameBuffer a_frame, double a_time );
+    FrameBuffer pop();
+    int getCount() const;
+    double getMaxTime() const;
+    double getFrontFrameTime() const;
 
 private:
-    std::queue<AVPacket> mQueue;
-    int mSize;
+    std::queue<FrameBuffer> mFifo;
+    std::queue<double> mTime;
+    double mMaxTime;
 };
 
 #endif // FRAME_FIFO_HPP

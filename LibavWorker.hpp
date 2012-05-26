@@ -9,6 +9,7 @@ extern "C"{
     #include "libavformat/avformat.h"
     #include "libswscale/swscale.h"
 }
+#include "FrameFifo.hpp"
 
 class LibavWorker : public QObject
 {
@@ -21,12 +22,10 @@ signals:
 
 public slots:
     void decodeAudioVideo( QString aFileName );
-    uint8_t const * getPpmBuffer() const;
-    int getPpmSize() const;
 
 private:
     void saveFrame( int aFrame );
-    void fillPpmBuffer( AVFrame *pFrame, int width, int height );
+    FrameFifo::FrameBuffer turnFrameBuffer( AVFrame *aDecodedFrame, int width, int height );
     void appendPcmToFile( void const * aPcmBuffer, int aPcmSize, char const * aFileName );
 
     void setFileName( QString aFileName );
@@ -37,10 +36,8 @@ private:
     void convertToRGBFrame( AVCodecContext * videoCodecCtx, AVFrame * decodedFrame, AVFrame * pFrameRGB );
 
     QString mFileName;
-
-    // 100 for ppm file header, 3 for RGB, 1920 * 1680 for max screen
-    uint8_t mPpmBuffer[100+3*1920*1680];
-    int mPpmSize;
+    FrameFifo mVideoFifo;
+    FrameFifo mAudioFifo;
 };
 
 #endif // LABAVWORKER_H

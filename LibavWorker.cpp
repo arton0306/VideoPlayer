@@ -22,31 +22,32 @@ void LibavWorker::saveFrame( int aFrame )
         return;
 
     // Write file by buffer
-    fwrite( (char *)mPpmBuffer, 1, mPpmSize, pFile );
+    // fwrite( (char *)mPpmBuffer, 1, mPpmSize, pFile );
 
     // Close file
     fclose( pFile );
 }
 
-void LibavWorker::fillPpmBuffer( AVFrame *aDecodedFrame, int width, int height )
+FrameFifo::FrameBuffer LibavWorker::turnFrameBuffer( AVFrame *aDecodedFrame, int width, int height )
 {
-    // Write ppm header
-    int const headLength = sprintf( (char *)mPpmBuffer, "P6\n%d %d\n255\n", width, height );
+    // Write ppm header to a temp buffer
+    char ppmHeader[30];
+    int const headLength = sprintf( ppmHeader, "P6\n%d %d\n255\n", width, height );
 
-    // Write pixel data
+    // Write ppm totally
     int const horizontalLineBytes = width * 3; // =aDecodedFrame->linesize[0]
+    int const ppmSize = headLength + height * horizontalLineBytes;
+    assert( ppmSize != 0 );
+    FrameFifo::FrameBuffer frameBuffer( ppmSize, 0 );
+    memcpy( &frameBuffer[0], ppmHeader, headLength );
     for( int rowIndex = 0; rowIndex < height; ++rowIndex )
     {
-        memcpy( mPpmBuffer + headLength + rowIndex * horizontalLineBytes,
+        memcpy( &frameBuffer[0] + headLength + rowIndex * horizontalLineBytes,
                 aDecodedFrame->data[0] + rowIndex * horizontalLineBytes,
                 horizontalLineBytes );
     }
 
-    // Write buffer size
-    mPpmSize = headLength + height * horizontalLineBytes;
-
-    emit frameReady( mPpmBuffer, mPpmSize );
-    SleepThread::msleep( 22 );
+    return frameBuffer;
 }
 
 void LibavWorker::setFileName( QString aFileName )
@@ -164,10 +165,19 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
     int videoFrameIndex = 0;
     int audioFrameIndex = 0;
     int packetIndex = 0;
+    double const fps = av_q2d( formatCtx->streams[videoFrameIndex]->avg_frame_rate );
+    DEBUG() << "video fps:" << fps;
     DEBUG() << "videoStreamIndex:" << videoStreamIndex << "    audioStreamIndex:" << audioStreamIndex;
+
     while ( av_read_frame( formatCtx, &packet ) >= 0 )
     {
         ++packetIndex;
+
+        // determine whether decoded frame is not enough
+        if ( mVideoFifo.getMaxTime() > 5 * 1.0 / fps )
+        {
+            break;
+        }
 
         // Is this packet from the video stream?
         if ( packet.stream_index == videoStreamIndex )
@@ -186,7 +196,10 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
                 convertToRGBFrame( videoCodecCtx, decodedFrame, pFrameRGB );
 
                 // fill in our ppm buffer
-                fillPpmBuffer( pFrameRGB, videoCodecCtx->width, videoCodecCtx->height );
+                mVideoFifo.push(
+                    turnFrameBuffer( pFrameRGB, videoCodecCtx->width, videoCodecCtx->height ),
+                    packet.dts * av_q2d(formatCtx->streams[videoStreamIndex]->time_base )
+                    );
 
                 // Dump pts and dts for debug
                 ++videoFrameIndex;
@@ -284,16 +297,6 @@ void LibavWorker::convertToRGBFrame( AVCodecContext * videoCodecCtx, AVFrame * d
 
     // Release SwsContext
     sws_freeContext( pConvertedSwsCtx );
-}
-
-uint8_t const * LibavWorker::getPpmBuffer() const
-{
-    return mPpmBuffer;
-}
-
-int LibavWorker::getPpmSize() const
-{
-    return mPpmSize;
 }
 
 // this will spend lots time, which will cause the delay in video
