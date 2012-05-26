@@ -1,5 +1,5 @@
-#ifndef PACKETQUEUE_HPP
-#define PACKETQUEUE_HPP
+#ifndef FRAME_FIFO_HPP
+#define FRAME_FIFO_HPP
 
 #include "UINT64_C_incpp.hpp"
 extern "C"{
@@ -8,10 +8,10 @@ extern "C"{
 
 #include <queue>
 
-class PacketQueue
+class FrameFifo
 {
 public:
-    PacketQueue();
+    FrameFifo();
     void put( AVPacket * aPkt );
     AVPacket get();
 
@@ -20,4 +20,4 @@ private:
     int mSize;
 };
 
-#endif // PACKETQUEUE_HPP
+#endif // FRAME_FIFO_HPP

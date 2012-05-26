@@ -10,20 +10,19 @@ TARGET = VideoPlayer
 TEMPLATE = app
 
 
-SOURCES += main.cpp\
-        VideoPlayer.cpp \
-        LibavWorker.cpp \
+SOURCES += \
+    main.cpp\
+    VideoPlayer.cpp \
+    LibavWorker.cpp \
     QGLCanvas.cpp \
-    PacketQueue.cpp \
     debug.cpp \
     WavOutFile.cpp
 
-HEADERS  += \
+HEADERS += \
     VideoPlayer.hpp \
     LibavWorker.hpp \
     QGLCanvas.hpp \
     QtSleepHacker.hpp \
-    PacketQueue.hpp \
     UINT64_C_incpp.hpp \
     debug.hpp \
     WavOutFile.hpp

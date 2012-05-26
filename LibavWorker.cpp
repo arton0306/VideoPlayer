@@ -34,11 +34,11 @@ void LibavWorker::fillPpmBuffer( AVFrame *aDecodedFrame, int width, int height )
     int const headLength = sprintf( (char *)mPpmBuffer, "P6\n%d %d\n255\n", width, height );
 
     // Write pixel data
-    int const horizontalLineBytes = width * 3;
+    int const horizontalLineBytes = width * 3; // =aDecodedFrame->linesize[0]
     for( int rowIndex = 0; rowIndex < height; ++rowIndex )
     {
         memcpy( mPpmBuffer + headLength + rowIndex * horizontalLineBytes,
-                aDecodedFrame->data[0] + rowIndex * aDecodedFrame->linesize[0],
+                aDecodedFrame->data[0] + rowIndex * horizontalLineBytes,
                 horizontalLineBytes );
     }
 
