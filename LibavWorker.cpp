@@ -10,25 +10,7 @@ LibavWorker::LibavWorker(QObject *parent) :
 {
 }
 
-void LibavWorker::saveFrame( int aFrame )
-{
-    FILE *pFile;
-    char szFilename[32];
-
-    // Open file
-    sprintf(szFilename, "frame%05d.ppm", aFrame);
-    pFile=fopen(szFilename, "wb");
-    if(pFile==NULL)
-        return;
-
-    // Write file by buffer
-    // fwrite( (char *)mPpmBuffer, 1, mPpmSize, pFile );
-
-    // Close file
-    fclose( pFile );
-}
-
-FrameFifo::FrameBuffer LibavWorker::turnFrameBuffer( AVFrame *aDecodedFrame, int width, int height )
+FrameFifo::FrameBuffer LibavWorker::turnVideoFrameToBuffer( AVFrame *aDecodedFrame, int width, int height )
 {
     // Write ppm header to a temp buffer
     char ppmHeader[30];
@@ -112,6 +94,9 @@ AVCodecContext * LibavWorker::getCodecCtx( AVFormatContext * aFormatCtx, int aSt
 
 void LibavWorker::decodeAudioVideo( QString aFileName )
 {
+    // data member init
+    init();
+
     /******************************************
                     Codec Init
     ******************************************/
@@ -169,21 +154,23 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
     DEBUG() << "video fps:" << fps;
     DEBUG() << "videoStreamIndex:" << videoStreamIndex << "    audioStreamIndex:" << audioStreamIndex;
 
+    ready( AVInfo( fps ) );
+
     while ( av_read_frame( formatCtx, &packet ) >= 0 )
     {
         ++packetIndex;
 
         // determine whether decoded frame is not enough
-        if ( mVideoFifo.getMaxTime() > 5 * 1.0 / fps )
+        while ( isAvFrameEnough( fps ) )
         {
-            break;
+            QThread.msleep( 0.1 * 1.0 / fps );
         }
 
         // Is this packet from the video stream?
         if ( packet.stream_index == videoStreamIndex )
         {
             // Decode video frame
-            int bytesUsed = avcodec_decode_video2( videoCodecCtx, decodedFrame, &frameFinished, &packet );
+            int const bytesUsed = avcodec_decode_video2( videoCodecCtx, decodedFrame, &frameFinished, &packet );
             if ( bytesUsed != packet.size )
             {
                 // check if one packet is corresponding to one frame
@@ -197,7 +184,7 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
 
                 // fill in our ppm buffer
                 mVideoFifo.push(
-                    turnFrameBuffer( pFrameRGB, videoCodecCtx->width, videoCodecCtx->height ),
+                    turnVideoFrameToBuffer( pFrameRGB, videoCodecCtx->width, videoCodecCtx->height ),
                     packet.dts * av_q2d(formatCtx->streams[videoStreamIndex]->time_base )
                     );
 
@@ -220,7 +207,7 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
             while ( packet.size > 0 )
             {
                 // Decod audio frame
-                int bytesUsed = avcodec_decode_audio4( audioCodecCtx, decodedFrame, &frameFinished, &packet );
+                int const bytesUsed = avcodec_decode_audio4( audioCodecCtx, decodedFrame, &frameFinished, &packet );
                 if ( bytesUsed < 0 )
                 {
                     fprintf( stderr, "Error while decoding audio!\n" );
@@ -230,9 +217,14 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
                 {
                     if ( frameFinished )
                     {
-                        int data_size = av_samples_get_buffer_size(NULL, audioCodecCtx->channels,
+                        int const data_size = av_samples_get_buffer_size(NULL, audioCodecCtx->channels,
                             decodedFrame->nb_samples,
                             audioCodecCtx->sample_fmt, 1);
+
+                        // push audio data to fifo
+                        FrameFifo::FrameBuffer frameBuffer( data_size, 0 );
+                        memcpy( &frameBuffer[0], decodedFrame->data[0], data_size );
+                        mAudioFifo.push( frameBuffer, av_q2d(formatCtx->streams[audioStreamIndex]->time_base) * packet.pts );
 
                         // appendPcmToFile( decodedFrame->data[0], data_size, "pcm.pcm" ); // this will spend lots time, which will cause the delay in video
                         ++audioFrameIndex;
@@ -306,4 +298,16 @@ void LibavWorker::appendPcmToFile( void const * aPcmBuffer, int aPcmSize, char c
     assert( outfile );
     fwrite( aPcmBuffer, 1, aPcmSize, outfile );
     fclose( outfile );
+}
+
+bool LibavWorker::isAvFrameEnough( double a_fps ) const
+{
+    return ( min( mVideoFifo.getMaxTime(), mAudioFifo.getMaxTime() ) > 5 * 1.0 / a_fps );
+}
+
+void LibavWorker::init()
+{
+    mIsReady = false;
+    mVideoFifo.clear();
+    mAudioFifo.clear();
 }

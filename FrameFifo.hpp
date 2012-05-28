@@ -20,6 +20,7 @@ public:
     int getCount() const;
     double getMaxTime() const;
     double getFrontFrameTime() const;
+    void clear();
 
 private:
     std::queue<FrameBuffer> mFifo;

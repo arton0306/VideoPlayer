@@ -10,6 +10,7 @@ extern "C"{
     #include "libswscale/swscale.h"
 }
 #include "FrameFifo.hpp"
+#include "AVInfo.hpp"
 
 class LibavWorker : public QObject
 {
@@ -19,16 +20,19 @@ public:
 
 signals:
     void frameReady( uint8_t const * aPpmBuffer, int aPpmSize );
+    void ready( AVInfo aAVInfo );
 
 public slots:
     void decodeAudioVideo( QString aFileName );
 
 private:
-    void saveFrame( int aFrame );
-    FrameFifo::FrameBuffer turnFrameBuffer( AVFrame *aDecodedFrame, int width, int height );
+    void init();
+    FrameFifo::FrameBuffer turnVideoFrameToBuffer( AVFrame *aDecodedFrame, int width, int height );
     void appendPcmToFile( void const * aPcmBuffer, int aPcmSize, char const * aFileName );
-
     void setFileName( QString aFileName );
+    bool isAvFrameEnough( double a_fps ) const;
+
+    // libav
     int readHeader( AVFormatContext ** aFormatCtx );
     int retrieveStreamInfo( AVFormatContext * aFormatCtx );
     int getStreamIndex( AVFormatContext * aFormatCtx, AVMediaType aMediaType );
@@ -38,6 +42,7 @@ private:
     QString mFileName;
     FrameFifo mVideoFifo;
     FrameFifo mAudioFifo;
+    bool mIsReady; // true if the first time decoded phase is done
 };
 
 #endif // LABAVWORKER_H

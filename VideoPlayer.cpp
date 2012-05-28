@@ -20,10 +20,20 @@ VideoPlayer::VideoPlayer(QWidget *parent)
     QMetaObject::invokeMethod( libavWorker, "decodeAudioVideo", Qt::QueuedConnection,
         Q_ARG(QString, "video/Lelouch.mp4") );
 
-    connect( libavWorker,
-        SIGNAL(frameReady( uint8_t const *, int )),
-        videoCanvas,
-        SLOT(renewFrame( uint8_t const *, int )) );
+}
+
+void VideoPlayer::setupConnection()
+{
+    // connect( libavWorker, SIGNAL(frameReady( uint8_t const *, int )),
+    //          videoCanvas,   SLOT(renewFrame( uint8_t const *, int )) );
+
+    connect( libavWorker, SIGNAL(    ready( AVInfo )),
+             this       ,   SLOT(startPlay( AVInfo )) );
+}
+
+void VideoPlayer::startPlay( AVInfo aAvInfo )
+{
+    mCurrentAvInfo = aAvInfo;
 }
 
 VideoPlayer::~VideoPlayer()

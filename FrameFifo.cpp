@@ -2,6 +2,7 @@
 #include "FrameFifo.hpp"
 
 FrameFifo::FrameFifo()
+    : mMaxTime( 0.0 )
 {
 }
 
@@ -38,4 +39,15 @@ int FrameFifo::getCount() const
 double FrameFifo::getMaxTime() const
 {
     return mMaxTime;
+}
+
+void FrameFifo::clear()
+{
+    assert( mFifo.size() == mTime.pop() );
+    while ( !mFifo.empty() )
+    {
+        mFifo.pop();
+        mTime.pop();
+    }
+    mMaxTime = 0.0;
 }
