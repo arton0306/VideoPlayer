@@ -4,14 +4,27 @@
 class AVInfo
 {
 public:
-    AVInfo( double aFps );
-    AVInfo( AVInfo const & aAvInfo );
+    AVInfo
+        (
+        double aFps,
+        double aUsecs,
+        unsigned aAudioChannel,
+        unsigned aAudioSampleRate,
+        unsigned aAudioBitsPerSample
+        );
     double getFps() const;
-    double getLenth() const;
+    double getUsecs() const;
+    unsigned getAudioChannel() const;
+    unsigned getAudioSampleRate() const;
+    unsigned getAudioBitsPerSample() const;
+    // AVInfo( AVInfo const & aAvInfo );
 
 private:
     double mFps;
-    double mLength;
+    double mUsecs;
+    unsigned mAudioChannel;
+    unsigned mAudioSampleRate;
+    unsigned mAudioBitsPerSample;
 };
 
 #endif // AV_INFO_HPP

@@ -3,6 +3,8 @@
 #include "QtSleepHacker.hpp"
 #include "debug.hpp"
 
+#define BITS_PER_BYTES 8
+
 using namespace std;
 
 LibavWorker::LibavWorker(QObject *parent) :
@@ -154,7 +156,13 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
     DEBUG() << "video fps:" << fps;
     DEBUG() << "videoStreamIndex:" << videoStreamIndex << "    audioStreamIndex:" << audioStreamIndex;
 
-    ready( AVInfo( fps ) );
+    ready( AVInfo(
+        fps,
+        formatCtx->duration,
+        audioCodecCtx->channels,
+        audioCodecCtx->sample_rate,
+        av_get_bytes_per_sample(audioCodecCtx->sample_fmt) * BITS_PER_BYTES
+        ) );
 
     while ( av_read_frame( formatCtx, &packet ) >= 0 )
     {

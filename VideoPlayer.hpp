@@ -21,13 +21,14 @@ public slots:
 
 private:
     void setupConnection();
+    QAudioFormat getAudioFormat( AVInfo const & aAvInfo ) const;
 
     // the widget to play video
     QGLCanvas * videoCanvas;
 
     // the objects to play audio
-    QAudioOutput * mAudio;
-    QIODevice * mAudioOutputDevice;
+    QAudioOutput * mAudioOutput;
+    QIODevice * mOutputDevice;
 
     // the infomation of the current playing multimedia
     AVInfo mCurrentAvInfo;
