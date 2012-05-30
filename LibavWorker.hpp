@@ -1,5 +1,5 @@
-#ifndef LIBAVWORKER_HPP
-#define LIBAVWORKER_HPP
+#ifndef LIBAV_WORKER_HPP
+#define LIBAV_WORKER_HPP
 
 #include <QObject>
 #include <QString>
@@ -17,6 +17,8 @@ class LibavWorker : public QObject
     Q_OBJECT
 public:
     explicit LibavWorker(QObject *parent = 0);
+    vector<uint8> popAllAudioStream();
+    vector<uint8> popOneVideoFrame();
 
 signals:
     void frameReady( uint8_t const * aPpmBuffer, int aPpmSize );
@@ -27,7 +29,7 @@ public slots:
 
 private:
     void init();
-    FrameFifo::FrameBuffer turnVideoFrameToBuffer( AVFrame *aDecodedFrame, int width, int height );
+    vector<uint8> convertToUint8Stream( AVFrame *aDecodedFrame, int width, int height );
     void appendPcmToFile( void const * aPcmBuffer, int aPcmSize, char const * aFileName );
     void setFileName( QString aFileName );
     bool isAvFrameEnough( double a_fps ) const;
@@ -45,4 +47,4 @@ private:
     bool mIsReady; // true if the first time decoded phase is done
 };
 
-#endif // LABAVWORKER_H
+#endif // LIBAV_WORKER_HPP

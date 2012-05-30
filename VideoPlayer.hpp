@@ -16,8 +16,12 @@ public:
     explicit VideoPlayer(QWidget *parent = 0);
     ~VideoPlayer();
 
+signals:
+    void failAvFormat();
+
 public slots:
     void startPlay( AVInfo aAvInfo );
+    void fetchDecodedAvData();
 
 private:
     void setupConnection();
@@ -32,6 +36,9 @@ private:
 
     // the infomation of the current playing multimedia
     AVInfo mCurrentAvInfo;
+
+    // timer to fetch decoded frame
+    QTimer mTimer;
 };
 
 #endif // VIDEOPLAYER_H

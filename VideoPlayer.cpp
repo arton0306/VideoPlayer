@@ -7,6 +7,8 @@
 VideoPlayer::VideoPlayer(QWidget *parent)
     : QMainWindow(parent)
     , videoCanvas( NULL )
+    , mAudioOutput( NULL )
+    , mOutputDevice( NULL )
 {
     setupUi(this);
 
@@ -24,11 +26,8 @@ VideoPlayer::VideoPlayer(QWidget *parent)
 
 void VideoPlayer::setupConnection()
 {
-    // connect( libavWorker, SIGNAL(frameReady( uint8_t const *, int )),
-    //          videoCanvas,   SLOT(renewFrame( uint8_t const *, int )) );
-
-    connect( libavWorker, SIGNAL(    ready( AVInfo )),
-             this       ,   SLOT(startPlay( AVInfo )) );
+    connect( libavWorker, SIGNAL(ready( AVInfo )), this, SLOT(startPlay( AVInfo )) );
+    connect( timer, SIGNAL(timeout()), this, SLOT(fetchDecodedAvData()));
 }
 
 void VideoPlayer::startPlay( AVInfo aAvInfo )
@@ -36,6 +35,22 @@ void VideoPlayer::startPlay( AVInfo aAvInfo )
     mCurrentAvInfo = aAvInfo;
     QAudioFormat format = getAudioFormat( aAVInfo );
 
+    if ( !QAudioDeviceInfo::defaultOutputDevice().isFormatSupported( format ) )
+    {
+        failAvFormat();
+    }
+    else
+    {
+        delete mAudioOutput;
+        mAudioOuput = new QAudioOutput( format ); // the Qt example has 2nd augument - this
+        mOutputDevice = mAudioOutput.start();
+        timer.start( 1.0 / aAvInfo.getFps() * 0.1 );
+    }
+}
+
+void VideoPlayer::fetchDecodedAvData()
+{
+    
 }
 
 QAudioFormat VideoPlayer::getAudioFormat( AVInfo const & aAvInfo )
@@ -53,4 +68,5 @@ QAudioFormat VideoPlayer::getAudioFormat( AVInfo const & aAvInfo )
 
 VideoPlayer::~VideoPlayer()
 {
+    delete mAudioOuput;
 }

@@ -9,21 +9,21 @@ extern "C"{
 #include <queue>
 #include <vector>
 
+typedef unsigned char uint8;
+
 class FrameFifo
 {
 public:
-    typedef std::vector<char> FrameBuffer;
-
     FrameFifo();
-    void push( FrameBuffer a_frame, double a_time );
-    FrameBuffer pop();
+    void push( vector<uint8> a_frame, double a_time );
+    vector<uint8> pop();
     int getCount() const;
     double getMaxTime() const;
     double getFrontFrameTime() const;
     void clear();
 
 private:
-    std::queue<FrameBuffer> mFifo;
+    std::queue<vector<uint8> > mFifo;
     std::queue<double> mTime;
     double mMaxTime;
 };

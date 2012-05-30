@@ -6,11 +6,11 @@ class AVInfo
 public:
     AVInfo
         (
-        double aFps,
-        double aUsecs,
-        unsigned aAudioChannel,
-        unsigned aAudioSampleRate,
-        unsigned aAudioBitsPerSample
+        double aFps = 0.0,
+        double aUsecs = 0.0,
+        unsigned aAudioChannel = 0,
+        unsigned aAudioSampleRate = 0,
+        unsigned aAudioBitsPerSample = 0
         );
     double getFps() const;
     double getUsecs() const;

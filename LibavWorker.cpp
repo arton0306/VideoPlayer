@@ -1,4 +1,5 @@
 #include <cassert>
+#include <algorithm>
 #include "LibavWorker.hpp"
 #include "QtSleepHacker.hpp"
 #include "debug.hpp"
@@ -12,26 +13,55 @@ LibavWorker::LibavWorker(QObject *parent) :
 {
 }
 
-FrameFifo::FrameBuffer LibavWorker::turnVideoFrameToBuffer( AVFrame *aDecodedFrame, int width, int height )
+vector<uint8> LibavWorker::convertToUint8Stream( AVFrame *aDecodedFrame, int width, int height )
 {
     // Write ppm header to a temp buffer
-    char ppmHeader[30];
+    uint8 ppmHeader[30];
     int const headLength = sprintf( ppmHeader, "P6\n%d %d\n255\n", width, height );
 
     // Write ppm totally
     int const horizontalLineBytes = width * 3; // =aDecodedFrame->linesize[0]
     int const ppmSize = headLength + height * horizontalLineBytes;
     assert( ppmSize != 0 );
-    FrameFifo::FrameBuffer frameBuffer( ppmSize, 0 );
-    memcpy( &frameBuffer[0], ppmHeader, headLength );
+    vector<uint8> decodedStream( ppmSize, 0 );
+    memcpy( &decodedStream[0], ppmHeader, headLength );
     for( int rowIndex = 0; rowIndex < height; ++rowIndex )
     {
-        memcpy( &frameBuffer[0] + headLength + rowIndex * horizontalLineBytes,
+        memcpy( &decodedStream[0] + headLength + rowIndex * horizontalLineBytes,
                 aDecodedFrame->data[0] + rowIndex * horizontalLineBytes,
                 horizontalLineBytes );
     }
 
-    return frameBuffer;
+    return decodedStream;
+}
+
+// can be called by player thread
+vector<uint8> LibavWorker::popAllAudioStream()
+{
+    int frameCount = mAudioFifo.getCount();
+
+    vector<uint8> result;
+    while ( frameCount-- )
+    {
+        vector<uint8> oneAudioStream = mAudioFifo.pop();
+        copy( oneAudioStream.begin(), oneAudioStream.end(), result.end() );
+    }
+
+    return result;
+}
+
+// can be called by player thread
+vector<uint8> LibavWorker::popOneVideoFrame()
+{
+    if ( mVideoFifo.getCount() > 0 )
+    {
+        return mVideoFifo.pop();
+    }
+    else
+    {
+        vector<uint8> empty;
+        return empty;
+    }
 }
 
 void LibavWorker::setFileName( QString aFileName )
@@ -192,7 +222,7 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
 
                 // fill in our ppm buffer
                 mVideoFifo.push(
-                    turnVideoFrameToBuffer( pFrameRGB, videoCodecCtx->width, videoCodecCtx->height ),
+                    convertToUint8Stream( pFrameRGB, videoCodecCtx->width, videoCodecCtx->height ),
                     packet.dts * av_q2d(formatCtx->streams[videoStreamIndex]->time_base )
                     );
 
@@ -230,9 +260,9 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
                             audioCodecCtx->sample_fmt, 1);
 
                         // push audio data to fifo
-                        FrameFifo::FrameBuffer frameBuffer( data_size, 0 );
-                        memcpy( &frameBuffer[0], decodedFrame->data[0], data_size );
-                        mAudioFifo.push( frameBuffer, av_q2d(formatCtx->streams[audioStreamIndex]->time_base) * packet.pts );
+                        vector<uint8> decodedStream( data_size, 0 );
+                        memcpy( &decodedStream[0], decodedFrame->data[0], data_size );
+                        mAudioFifo.push( decodedStream, av_q2d(formatCtx->streams[audioStreamIndex]->time_base) * packet.pts );
 
                         // appendPcmToFile( decodedFrame->data[0], data_size, "pcm.pcm" ); // this will spend lots time, which will cause the delay in video
                         ++audioFrameIndex;

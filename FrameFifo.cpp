@@ -6,7 +6,7 @@ FrameFifo::FrameFifo()
 {
 }
 
-void FrameFifo::push( FrameBuffer a_frame, double a_time )
+void FrameFifo::push( vector<uint8> a_frame, double a_time )
 {
     mFifo.push( a_frame );
     mTime.push( a_time );
@@ -14,9 +14,9 @@ void FrameFifo::push( FrameBuffer a_frame, double a_time )
     mMaxTime = a_time;
 }
 
-FrameFifo::FrameBuffer FrameFifo::pop()
+vector<uint8> FrameFifo::pop()
 {
-    FrameBuffer retFrame;
+    vector<uint8> retFrame;
     if ( mFifo.size() > 0 )
     {
         retFrame = mFifo.front();
