@@ -1,4 +1,6 @@
-AVInfo:AVInfo
+#include "AVInfo.hpp"
+
+AVInfo::AVInfo
     (
     double aFps /* = 0.0 */,
     double aUsecs /* = 0.0 */,

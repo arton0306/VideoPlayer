@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui opengl
+QT       += core gui opengl multimedia
 
 TARGET = VideoPlayer
 TEMPLATE = app
@@ -17,7 +17,9 @@ SOURCES += \
     QGLCanvas.cpp \
     debug.cpp \
     WavOutFile.cpp \
-    FrameFifo.cpp
+    FrameFifo.cpp \
+    AVInfo.cpp \
+    Sleep.cpp
 
 HEADERS += \
     VideoPlayer.hpp \
@@ -27,7 +29,9 @@ HEADERS += \
     UINT64_C_incpp.hpp \
     debug.hpp \
     WavOutFile.hpp \
-    FrameFifo.hpp
+    FrameFifo.hpp \
+    AVInfo.hpp \
+    Sleep.hpp
 
 FORMS    += VideoPlayer.ui
 

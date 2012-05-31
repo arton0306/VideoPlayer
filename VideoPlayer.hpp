@@ -4,9 +4,11 @@
 #include "ui_VideoPlayer.h"
 #include <QMainWindow>
 #include <QAudioOutput>
+#include <QTimer>
 #include "AVInfo.hpp"
 
 class QGLCanvas;
+class LibavWorker;
 
 class VideoPlayer : public QMainWindow, private Ui::VideoPlayer
 {
@@ -21,11 +23,16 @@ signals:
 
 public slots:
     void startPlay( AVInfo aAvInfo );
-    void fetchDecodedAvData();
+    void fetchAndPlay();
 
 private:
     void setupConnection();
     QAudioFormat getAudioFormat( AVInfo const & aAvInfo ) const;
+    double getAudioPlayedSecond() const;
+    double getRenewPeriod( double a_fps ) const;
+
+    // the decoded thread
+    LibavWorker * mLibavWorker;
 
     // the widget to play video
     QGLCanvas * videoCanvas;

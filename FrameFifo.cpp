@@ -1,6 +1,8 @@
 #include <cassert>
 #include "FrameFifo.hpp"
 
+using namespace std;
+
 FrameFifo::FrameFifo()
     : mMaxTime( 0.0 )
 {
@@ -8,32 +10,52 @@ FrameFifo::FrameFifo()
 
 void FrameFifo::push( vector<uint8> a_frame, double a_time )
 {
-    mFifo.push( a_frame );
-    mTime.push( a_time );
-    assert( a_time >= mMaxTime );
-    mMaxTime = a_time;
+    mMutex.lock();
+    {
+        mFifo.push( a_frame );
+        mTime.push( a_time );
+        assert( a_time >= mMaxTime );
+        mMaxTime = a_time;
+    }
+    mMutex.unlock();
 }
 
 vector<uint8> FrameFifo::pop()
 {
     vector<uint8> retFrame;
-    if ( mFifo.size() > 0 )
+    mMutex.lock();
     {
-        retFrame = mFifo.front();
-        mFifo.pop();
-        mTime.pop();
+        if ( mFifo.size() > 0 )
+        {
+            retFrame = mFifo.front();
+            mFifo.pop();
+            mTime.pop();
+        }
     }
+    mMutex.unlock();
     return retFrame;
 }
 
 double FrameFifo::getFrontFrameTime() const
 {
-    return mTime.front();
+    double result = 0.0;
+    mMutex.lock();
+    {
+        result = mTime.front();
+    }
+    mMutex.unlock();
+    return result;
 }
 
 int FrameFifo::getCount() const
 {
-    return mFifo.size();
+    int result = 0;
+    mMutex.lock();
+    {
+        result = mFifo.size();
+    }
+    mMutex.unlock();
+    return result;
 }
 
 double FrameFifo::getMaxTime() const
@@ -43,11 +65,15 @@ double FrameFifo::getMaxTime() const
 
 void FrameFifo::clear()
 {
-    assert( mFifo.size() == mTime.pop() );
-    while ( !mFifo.empty() )
+    mMutex.lock();
     {
-        mFifo.pop();
-        mTime.pop();
+        assert( mFifo.size() == mTime.size() );
+        while ( !mFifo.empty() )
+        {
+            mFifo.pop();
+            mTime.pop();
+        }
+        mMaxTime = 0.0;
     }
-    mMaxTime = 0.0;
+    mMutex.unlock();
 }

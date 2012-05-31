@@ -1,8 +1,10 @@
 #include <cassert>
 #include <algorithm>
+#include <QThread>
 #include "LibavWorker.hpp"
 #include "QtSleepHacker.hpp"
 #include "debug.hpp"
+#include "Sleep.hpp"
 
 #define BITS_PER_BYTES 8
 
@@ -16,7 +18,7 @@ LibavWorker::LibavWorker(QObject *parent) :
 vector<uint8> LibavWorker::convertToUint8Stream( AVFrame *aDecodedFrame, int width, int height )
 {
     // Write ppm header to a temp buffer
-    uint8 ppmHeader[30];
+    char ppmHeader[30];
     int const headLength = sprintf( ppmHeader, "P6\n%d %d\n255\n", width, height );
 
     // Write ppm totally
@@ -51,7 +53,7 @@ vector<uint8> LibavWorker::popAllAudioStream()
 }
 
 // can be called by player thread
-vector<uint8> LibavWorker::popOneVideoFrame()
+vector<uint8> LibavWorker::popNextVideoFrame()
 {
     if ( mVideoFifo.getCount() > 0 )
     {
@@ -61,6 +63,21 @@ vector<uint8> LibavWorker::popOneVideoFrame()
     {
         vector<uint8> empty;
         return empty;
+    }
+}
+
+// can be called by player thread
+double LibavWorker::getNextVideoFrameSecond() const
+{
+    return mVideoFifo.getFrontFrameTime();
+}
+
+// can be called by player thread
+void LibavWorker::dropNextVideoFrame()
+{
+    if ( mVideoFifo.getCount() > 0 )
+    {
+        mVideoFifo.pop();
     }
 }
 
@@ -201,7 +218,7 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
         // determine whether decoded frame is not enough
         while ( isAvFrameEnough( fps ) )
         {
-            QThread.msleep( 0.1 * 1.0 / fps );
+            Sleep::msleep( 0.1 * 1.0 / fps );
         }
 
         // Is this packet from the video stream?
