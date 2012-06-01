@@ -94,8 +94,9 @@ void VideoPlayer::fetchAndPlay()
     {
         // renew video frame if needed
         double const diff = currentPlaySecond - nextVideoFrameSecond;
+        double const absdiff = ( diff > 0 ? diff : -diff );
 
-        if ( abs( diff ) < getRenewPeriod( mCurrentAvInfo.getFps() ) )
+        if ( absdiff < 1.5 * 1.0 / mCurrentAvInfo.getFps() )
         {
             vector<uint8> videoFrameStream = mLibavWorker->popNextVideoFrame();
             videoCanvas->renewFrame( static_cast<uint8_t const *>( &videoFrameStream[0] ), videoFrameStream.size() );

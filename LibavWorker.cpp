@@ -364,7 +364,8 @@ void LibavWorker::appendPcmToFile( void const * aPcmBuffer, int aPcmSize, char c
 
 bool LibavWorker::isAvFrameEnough( double a_fps ) const
 {
-    return ( min( mVideoFifo.getMaxTime(), mAudioFifo.getMaxTime() - mCurrentPlaySecond ) > 5 * 1.0 / a_fps );
+    // return ( min( mVideoFifo.getMaxTime(), mAudioFifo.getMaxTime() - mCurrentPlaySecond ) > 5 * 1.0 / a_fps );
+    return ( min( mVideoFifo.getCount(), mAudioFifo.getCount() ) > 5 );
 }
 
 void LibavWorker::init()
