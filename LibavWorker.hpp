@@ -22,6 +22,7 @@ public:
     std::vector<uint8> popNextVideoFrame();
     void dropNextVideoFrame();
     double getNextVideoFrameSecond() const;
+    void setCurrentPlaySecond( double a_time );
 
 signals:
     void frameReady( uint8_t const * aPpmBuffer, int aPpmSize );
@@ -47,7 +48,7 @@ private:
     QString mFileName;
     FrameFifo mVideoFifo;
     FrameFifo mAudioFifo;
-    bool mIsReady; // true if the first time decoded phase is done
+    double mCurrentPlaySecond;
 };
 
 #endif // LIBAV_WORKER_HPP

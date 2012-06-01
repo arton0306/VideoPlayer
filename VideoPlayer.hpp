@@ -2,10 +2,12 @@
 #define VIDEOPLAYER_H
 
 #include "ui_VideoPlayer.h"
+#include <vector>
 #include <QMainWindow>
 #include <QAudioOutput>
 #include <QTimer>
 #include "AVInfo.hpp"
+#include "FrameFifo.hpp"
 
 class QGLCanvas;
 class LibavWorker;
@@ -40,6 +42,7 @@ private:
     // the objects to play audio
     QAudioOutput * mAudioOutput;
     QIODevice * mOutputDevice;
+    std::vector<uint8> mAudioStreamBuffer;
 
     // the infomation of the current playing multimedia
     AVInfo mCurrentAvInfo;

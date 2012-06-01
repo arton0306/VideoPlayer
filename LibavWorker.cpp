@@ -46,7 +46,7 @@ vector<uint8> LibavWorker::popAllAudioStream()
     while ( frameCount-- )
     {
         vector<uint8> oneAudioStream = mAudioFifo.pop();
-        copy( oneAudioStream.begin(), oneAudioStream.end(), result.end() );
+        result.insert( result.end(), oneAudioStream.begin(), oneAudioStream.end() );
     }
 
     return result;
@@ -70,6 +70,12 @@ vector<uint8> LibavWorker::popNextVideoFrame()
 double LibavWorker::getNextVideoFrameSecond() const
 {
     return mVideoFifo.getFrontFrameTime();
+}
+
+// can be called by player thread
+void LibavWorker::setCurrentPlaySecond( double a_time )
+{
+    mCurrentPlaySecond = a_time;
 }
 
 // can be called by player thread
@@ -218,7 +224,8 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
         // determine whether decoded frame is not enough
         while ( isAvFrameEnough( fps ) )
         {
-            Sleep::msleep( 0.1 * 1.0 / fps );
+            // Sleep::usleep( 0.1 * 1.0 / fps * 1000000 );
+            Sleep::msleep( 1 );
         }
 
         // Is this packet from the video stream?
@@ -357,12 +364,12 @@ void LibavWorker::appendPcmToFile( void const * aPcmBuffer, int aPcmSize, char c
 
 bool LibavWorker::isAvFrameEnough( double a_fps ) const
 {
-    return ( min( mVideoFifo.getMaxTime(), mAudioFifo.getMaxTime() ) > 5 * 1.0 / a_fps );
+    return ( min( mVideoFifo.getMaxTime(), mAudioFifo.getMaxTime() - mCurrentPlaySecond ) > 5 * 1.0 / a_fps );
 }
 
 void LibavWorker::init()
 {
-    mIsReady = false;
     mVideoFifo.clear();
     mAudioFifo.clear();
+    mCurrentPlaySecond = 0.0;
 }

@@ -17,6 +17,7 @@ public:
     unsigned getAudioChannel() const;
     unsigned getAudioSampleRate() const;
     unsigned getAudioBitsPerSample() const;
+    void dump() const;
     // AVInfo( AVInfo const & aAvInfo );
 
 private:

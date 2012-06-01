@@ -1,5 +1,6 @@
 #include <QThread>
 #include <cassert>
+#include "debug.hpp"
 #include "LibavWorker.hpp"
 #include "VideoPlayer.hpp"
 #include "QGLCanvas.hpp"
@@ -35,11 +36,13 @@ void VideoPlayer::setupConnection()
 void VideoPlayer::startPlay( AVInfo aAvInfo )
 {
     mCurrentAvInfo = aAvInfo;
+    mCurrentAvInfo.dump();
     QAudioFormat format = getAudioFormat( aAvInfo );
 
     if ( !QAudioDeviceInfo::defaultOutputDevice().isFormatSupported( format ) )
     {
         failAvFormat();
+        assert( false );
     }
     else
     {
@@ -68,31 +71,40 @@ double VideoPlayer::getAudioPlayedSecond() const
 
 void VideoPlayer::fetchAndPlay()
 {
-    // fetch all the decoded audio data and push into audio device
-    vector<uint8> audioStream = mLibavWorker->popAllAudioStream();
-    if ( !audioStream.empty() )
+    // fetch all the decoded audio data and push into audio device if the buffer is empty
+    if ( mAudioStreamBuffer.empty() )
     {
-        qint64 writeBytes = mOutputDevice->write( reinterpret_cast<const char *>( &audioStream[0] ), audioStream.size() );
-        assert( writeBytes == audioStream.size() );
+        vector<uint8> audioStreamFetched = mLibavWorker->popAllAudioStream();
+        qint64 const writeBytes = mOutputDevice->write( reinterpret_cast<const char *>( &audioStreamFetched[0] ), audioStreamFetched.size() );
+        mAudioStreamBuffer.insert( mAudioStreamBuffer.end(), audioStreamFetched.begin() + writeBytes, audioStreamFetched.end() );
+    }
+    else
+    {
+        qint64 const writeBytes = mOutputDevice->write( reinterpret_cast<const char *>( &mAudioStreamBuffer[0] ), mAudioStreamBuffer.size() );
+        mAudioStreamBuffer.erase( mAudioStreamBuffer.begin(), mAudioStreamBuffer.begin() + writeBytes );
     }
 
-    // get the time of audio played
+    // get the time of audio played and send to libavWorker thread
     double const currentPlaySecond = getAudioPlayedSecond();
+    mLibavWorker->setCurrentPlaySecond( currentPlaySecond );
 
     // get the time of the next video frame in decoded buffer
     double const nextVideoFrameSecond = mLibavWorker->getNextVideoFrameSecond();
+    if ( nextVideoFrameSecond != 0.0 )
+    {
+        // renew video frame if needed
+        double const diff = currentPlaySecond - nextVideoFrameSecond;
 
-    // renew video frame if needed
-    double const diff = currentPlaySecond - nextVideoFrameSecond;
-    if ( diff < 1.5 * mCurrentAvInfo.getFps() )
-    {
-        // video frame too old
-        mLibavWorker->dropNextVideoFrame();
-    }
-    else if ( diff < getRenewPeriod( mCurrentAvInfo.getFps() ) )
-    {
-        vector<uint8> videoFrameStream = mLibavWorker->popNextVideoFrame();
-        videoCanvas->renewFrame( static_cast<uint8_t const *>( &videoFrameStream[0] ), videoFrameStream.size() );
+        if ( abs( diff ) < getRenewPeriod( mCurrentAvInfo.getFps() ) )
+        {
+            vector<uint8> videoFrameStream = mLibavWorker->popNextVideoFrame();
+            videoCanvas->renewFrame( static_cast<uint8_t const *>( &videoFrameStream[0] ), videoFrameStream.size() );
+        }
+        else if ( diff > 0 )
+        {
+            // video frame too old
+            mLibavWorker->dropNextVideoFrame();
+        }
     }
 }
 

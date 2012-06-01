@@ -1,3 +1,4 @@
+#include "debug.hpp"
 #include "AVInfo.hpp"
 
 AVInfo::AVInfo
@@ -47,3 +48,12 @@ AVInfo( AVInfo const & aAvInfo )
     mUsecs = aAvInfo.mUsecs;
 }
 */
+
+void AVInfo::dump() const
+{
+    DEBUG() << "fps:" << mFps;
+    DEBUG() << "audio channel:" << mAudioChannel;
+    DEBUG() << "audio sample rate:" << mAudioSampleRate;
+    DEBUG() << "audio bits per sample:" << mAudioBitsPerSample;
+    DEBUG() << "av length:" << mUsecs / 1000000.0;
+}

@@ -41,7 +41,10 @@ double FrameFifo::getFrontFrameTime() const
     double result = 0.0;
     mMutex.lock();
     {
-        result = mTime.front();
+        if ( !mTime.empty() )
+        {
+            result = mTime.front();
+        }
     }
     mMutex.unlock();
     return result;
