@@ -322,7 +322,7 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
     av_free( buffer );
     av_free( pFrameRGB );
 
-    // Free the YUV frmae
+    // Free the YUV frame
     av_free( decodedFrame );
 
     // Close the codec
@@ -364,8 +364,7 @@ void LibavWorker::appendPcmToFile( void const * aPcmBuffer, int aPcmSize, char c
 
 bool LibavWorker::isAvFrameEnough( double a_fps ) const
 {
-    // return ( min( mVideoFifo.getMaxTime(), mAudioFifo.getMaxTime() - mCurrentPlaySecond ) > 5 * 1.0 / a_fps );
-    return ( min( mVideoFifo.getCount(), mAudioFifo.getCount() ) > 5 );
+    return ( min( mVideoFifo.getCount(), mAudioFifo.getCount() ) > 0 );
 }
 
 void LibavWorker::init()
