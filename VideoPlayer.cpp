@@ -57,7 +57,7 @@ void VideoPlayer::startPlay( AVInfo aAvInfo )
 double VideoPlayer::getRenewPeriod( double a_fps ) const
 {
     // return 250.0 / a_fps;
-    return 2;
+    return 5;
 }
 
 double VideoPlayer::getAudioPlayedSecond() const
@@ -96,7 +96,7 @@ void VideoPlayer::fetchAndPlay()
         double const diff = currentPlaySecond - nextVideoFrameSecond;
         double const absdiff = ( diff > 0 ? diff : -diff );
 
-        if ( absdiff < 0.5 * 1.0 / mCurrentAvInfo.getFps() )
+        if ( absdiff < 0.75 * 1.0 / mCurrentAvInfo.getFps() )
         {
             vector<uint8> videoFrameStream = mLibavWorker->popNextVideoFrame();
             DEBUG() << "frame should be presented:" << nextVideoFrameSecond << "\t currentSount:" << currentPlaySecond;

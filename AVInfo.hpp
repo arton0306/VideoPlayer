@@ -18,7 +18,6 @@ public:
     unsigned getAudioSampleRate() const;
     unsigned getAudioBitsPerSample() const;
     void dump() const;
-    // AVInfo( AVInfo const & aAvInfo );
 
 private:
     double mFps;

@@ -41,14 +41,6 @@ unsigned AVInfo::getAudioBitsPerSample() const
     return mAudioBitsPerSample;
 }
 
-/*
-AVInfo( AVInfo const & aAvInfo )
-{
-    mFps = aAvInfo.mFps;
-    mUsecs = aAvInfo.mUsecs;
-}
-*/
-
 void AVInfo::dump() const
 {
     DEBUG() << "fps:" << mFps;
