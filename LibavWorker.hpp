@@ -27,6 +27,7 @@ public:
 signals:
     void frameReady( uint8_t const * aPpmBuffer, int aPpmSize );
     void ready( AVInfo aAVInfo );
+    void decodeDone();
 
 public slots:
     void decodeAudioVideo( QString aFileName );

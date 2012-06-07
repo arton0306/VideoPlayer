@@ -19,7 +19,8 @@ SOURCES += \
     WavOutFile.cpp \
     FrameFifo.cpp \
     AVInfo.cpp \
-    Sleep.cpp
+    Sleep.cpp \
+    MultimediaWidget.cpp
 
 HEADERS += \
     VideoPlayer.hpp \
@@ -31,9 +32,11 @@ HEADERS += \
     WavOutFile.hpp \
     FrameFifo.hpp \
     AVInfo.hpp \
-    Sleep.hpp
+    Sleep.hpp \
+    MultimediaWidget.hpp
 
-FORMS    += VideoPlayer.ui
+FORMS    += VideoPlayer.ui \
+    MultimediaWidget.ui
 
 INCLUDEPATH += "$$_PRO_FILE_PWD_/libav/include/"
 INCLUDEPATH += "$$_PRO_FILE_PWD_/SDL/"

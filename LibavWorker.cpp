@@ -309,6 +309,10 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
         }
     }
 
+    // av reach to the end
+    decodeDone();
+
+
     /******************************************
                 Release the Resource
     ******************************************/
