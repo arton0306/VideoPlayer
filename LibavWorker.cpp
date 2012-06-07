@@ -19,20 +19,15 @@ vector<uint8> LibavWorker::convertToUint8Stream( AVFrame *aDecodedFrame, int wid
 {
     // Write ppm header to a temp buffer
     char ppmHeader[30];
-    int const headLength = sprintf( ppmHeader, "P6\n%d %d\n255\n", width, height );
+    int const headerSize = sprintf( ppmHeader, "P6\n%d %d\n255\n", width, height );
 
     // Write ppm totally
-    int const horizontalLineBytes = width * 3; // =aDecodedFrame->linesize[0]
-    int const ppmSize = headLength + height * horizontalLineBytes;
+    int const contentSize = height * width * 3; // =aDecodedFrame->linesize[0]
+    int const ppmSize = headerSize + contentSize;
     assert( ppmSize != 0 );
     vector<uint8> decodedStream( ppmSize, 0 );
-    memcpy( &decodedStream[0], ppmHeader, headLength );
-    for( int rowIndex = 0; rowIndex < height; ++rowIndex )
-    {
-        memcpy( &decodedStream[0] + headLength + rowIndex * horizontalLineBytes,
-                aDecodedFrame->data[0] + rowIndex * horizontalLineBytes,
-                horizontalLineBytes );
-    }
+    memcpy( &decodedStream[0], ppmHeader, headerSize );
+    memcpy( &decodedStream[0] + headerSize, aDecodedFrame->data[0], contentSize );
 
     return decodedStream;
 }
@@ -252,7 +247,7 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
 
                 // Dump pts and dts for debug
                 ++videoFrameIndex;
-                DEBUG() << "p ndx:" << packetIndex << "    vf ndx:" << videoFrameIndex << "     PTS:" << packet.pts << "     DTS:" << packet.dts << " TimeBase:" << av_q2d(formatCtx->streams[videoStreamIndex]->time_base) << " *dts: " << packet.dts * av_q2d(formatCtx->streams[videoStreamIndex]->time_base);
+                // DEBUG() << "p ndx:" << packetIndex << "    vf ndx:" << videoFrameIndex << "     PTS:" << packet.pts << "     DTS:" << packet.dts << " TimeBase:" << av_q2d(formatCtx->streams[videoStreamIndex]->time_base) << " *dts: " << packet.dts * av_q2d(formatCtx->streams[videoStreamIndex]->time_base);
             }
             else
             {
@@ -290,7 +285,7 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
 
                         // appendPcmToFile( decodedFrame->data[0], data_size, "pcm.pcm" ); // this will spend lots time, which will cause the delay in video
                         ++audioFrameIndex;
-                        DEBUG() << "p ndx:" << packetIndex << "     af ndx:" << audioFrameIndex << "     PTS:" << packet.pts << "     DTS:" << packet.dts << " TimeBase:" << av_q2d(formatCtx->streams[audioStreamIndex]->time_base) << " *dts:" << av_q2d(formatCtx->streams[audioStreamIndex]->time_base) * packet.pts;
+                        // DEBUG() << "p ndx:" << packetIndex << "     af ndx:" << audioFrameIndex << "     PTS:" << packet.pts << "     DTS:" << packet.dts << " TimeBase:" << av_q2d(formatCtx->streams[audioStreamIndex]->time_base) << " *dts:" << av_q2d(formatCtx->streams[audioStreamIndex]->time_base) * packet.pts;
                     }
                     else
                     {
@@ -364,7 +359,7 @@ void LibavWorker::appendPcmToFile( void const * aPcmBuffer, int aPcmSize, char c
 
 bool LibavWorker::isAvFrameEnough( double a_fps ) const
 {
-    return ( min( mVideoFifo.getCount(), mAudioFifo.getCount() ) > 0 );
+    return ( min( mVideoFifo.getCount(), mAudioFifo.getCount() ) > 1 );
 }
 
 void LibavWorker::init()

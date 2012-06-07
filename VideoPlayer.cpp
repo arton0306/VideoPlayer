@@ -56,7 +56,8 @@ void VideoPlayer::startPlay( AVInfo aAvInfo )
 // the period is a function of fps
 double VideoPlayer::getRenewPeriod( double a_fps ) const
 {
-    return 0.1 * 1.0 / a_fps;
+    // return 250.0 / a_fps;
+    return 2;
 }
 
 double VideoPlayer::getAudioPlayedSecond() const
@@ -84,9 +85,8 @@ void VideoPlayer::fetchAndPlay()
         mAudioStreamBuffer.erase( mAudioStreamBuffer.begin(), mAudioStreamBuffer.begin() + writeBytes );
     }
 
-    // get the time of audio played and send to libavWorker thread
+    // get the time of audio played
     double const currentPlaySecond = getAudioPlayedSecond();
-    mLibavWorker->setCurrentPlaySecond( currentPlaySecond );
 
     // get the time of the next video frame in decoded buffer
     double const nextVideoFrameSecond = mLibavWorker->getNextVideoFrameSecond();
@@ -96,14 +96,16 @@ void VideoPlayer::fetchAndPlay()
         double const diff = currentPlaySecond - nextVideoFrameSecond;
         double const absdiff = ( diff > 0 ? diff : -diff );
 
-        if ( absdiff < 1.5 * 1.0 / mCurrentAvInfo.getFps() )
+        if ( absdiff < 0.5 * 1.0 / mCurrentAvInfo.getFps() )
         {
             vector<uint8> videoFrameStream = mLibavWorker->popNextVideoFrame();
+            DEBUG() << "frame should be presented:" << nextVideoFrameSecond << "\t currentSount:" << currentPlaySecond;
             videoCanvas->renewFrame( static_cast<uint8_t const *>( &videoFrameStream[0] ), videoFrameStream.size() );
         }
         else if ( diff > 0 )
         {
             // video frame too old
+            DEBUG() << "drop a frame which should be presented at:" << nextVideoFrameSecond << "\t currentSount:" << currentPlaySecond;
             mLibavWorker->dropNextVideoFrame();
         }
     }
