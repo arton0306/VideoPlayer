@@ -2,6 +2,7 @@
 #include "AVInfo.hpp"
 #include "VideoPlayer.hpp"
 #include "debug.hpp"
+#include "MultimediaWidget.hpp"
 
 int main(int argc, char *argv[])
 {
@@ -17,6 +18,7 @@ int main(int argc, char *argv[])
     qRegisterMetaType<AVInfo>("AVInfo");
 
     VideoPlayer w;
+    // MultimediaWidget w;
     w.show();
 
     return a.exec();
