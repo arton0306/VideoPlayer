@@ -18,11 +18,13 @@ class LibavWorker : public QObject
     Q_OBJECT
 public:
     explicit LibavWorker(QObject *parent = 0);
+
+public: // for other thread
     std::vector<uint8> popAllAudioStream();
     std::vector<uint8> popNextVideoFrame();
     void dropNextVideoFrame();
     double getNextVideoFrameSecond() const;
-    void setCurrentPlaySecond( double a_time );
+    void stopDecoding();
 
 signals:
     void frameReady( uint8_t const * aPpmBuffer, int aPpmSize );
@@ -49,7 +51,7 @@ private:
     QString mFileName;
     FrameFifo mVideoFifo;
     FrameFifo mAudioFifo;
-    double mCurrentPlaySecond;
+    bool mIsReceiveStopSignal;
 };
 
 #endif // LIBAV_WORKER_HPP

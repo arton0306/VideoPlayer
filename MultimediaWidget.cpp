@@ -23,17 +23,16 @@ MultimediaWidget::MultimediaWidget(QWidget *parent)
     QThread * libavThread = new QThread;
     mLibavWorker->moveToThread( libavThread );
     libavThread->start();
-    QMetaObject::invokeMethod( mLibavWorker, "decodeAudioVideo", Qt::QueuedConnection,
-        Q_ARG(QString, "video/Lelouch.mp4") );
+    play( QString( "video/Lelouch.mp4" ) );
 }
 
 void MultimediaWidget::setupConnection()
 {
-    connect( mLibavWorker, SIGNAL(ready( AVInfo )), this, SLOT(startPlay( AVInfo )) );
-    connect( &mTimer, SIGNAL(timeout()), this, SLOT(fetchAndPlay()) );
+    connect( mLibavWorker, SIGNAL(ready( AVInfo )), this, SLOT(getDecodeReadySig( AVInfo )) );
+    connect( &mTimer, SIGNAL(timeout()), this, SLOT(renew()) );
 }
 
-void MultimediaWidget::startPlay( AVInfo aAvInfo )
+void MultimediaWidget::getDecodeReadySig( AVInfo aAvInfo )
 {
     mCurrentAvInfo = aAvInfo;
     mCurrentAvInfo.dump();
@@ -70,7 +69,7 @@ double MultimediaWidget::getAudioPlayedSecond() const
     return static_cast<double>( usPlayed ) / 1000000.0;
 }
 
-void MultimediaWidget::fetchAndPlay()
+void MultimediaWidget::renew()
 {
     // fetch all the decoded audio data and push into audio device if the buffer is empty
     if ( mAudioStreamBuffer.empty() )
@@ -96,7 +95,7 @@ void MultimediaWidget::fetchAndPlay()
         double const diff = currentPlaySecond - nextVideoFrameSecond;
         double const absdiff = ( diff > 0 ? diff : -diff );
 
-        if ( absdiff < 0.75 * 1.0 / mCurrentAvInfo.getFps() )
+        if ( absdiff < 0.55 * 1.0 / mCurrentAvInfo.getFps() )
         {
             vector<uint8> videoFrameStream = mLibavWorker->popNextVideoFrame();
             DEBUG() << "frame should be presented:" << nextVideoFrameSecond << "\t currentSount:" << currentPlaySecond;
@@ -127,4 +126,10 @@ QAudioFormat MultimediaWidget::getAudioFormat( AVInfo const & aAvInfo ) const
 MultimediaWidget::~MultimediaWidget()
 {
     delete mAudioOutput;
+}
+
+void MultimediaWidget::play( QString aFileName )
+{
+    QMetaObject::invokeMethod( mLibavWorker, "decodeAudioVideo", Qt::QueuedConnection,
+        Q_ARG(QString, aFileName) );
 }

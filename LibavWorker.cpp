@@ -10,8 +10,9 @@
 
 using namespace std;
 
-LibavWorker::LibavWorker(QObject *parent) :
-    QObject(parent)
+LibavWorker::LibavWorker(QObject *parent)
+    : QObject(parent)
+    , mIsReceiveStopSignal( false )
 {
 }
 
@@ -68,18 +69,18 @@ double LibavWorker::getNextVideoFrameSecond() const
 }
 
 // can be called by player thread
-void LibavWorker::setCurrentPlaySecond( double a_time )
-{
-    mCurrentPlaySecond = a_time;
-}
-
-// can be called by player thread
 void LibavWorker::dropNextVideoFrame()
 {
     if ( mVideoFifo.getCount() > 0 )
     {
         mVideoFifo.pop();
     }
+}
+
+// can be called by player thread
+void LibavWorker::stopDecoding()
+{
+    mIsReceiveStopSignal = true;
 }
 
 void LibavWorker::setFileName( QString aFileName )
@@ -144,8 +145,8 @@ AVCodecContext * LibavWorker::getCodecCtx( AVFormatContext * aFormatCtx, int aSt
 
 void LibavWorker::decodeAudioVideo( QString aFileName )
 {
-    // data member init
-    init();
+    assert( mVideoFifo.getCount() == 0 );
+    assert( mAudioFifo.getCount() == 0 );
 
     /******************************************
                     Codec Init
@@ -214,6 +215,16 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
 
     while ( av_read_frame( formatCtx, &packet ) >= 0 )
     {
+        // determine whether be forced stop
+        if ( mIsReceiveStopSignal )
+        {
+            mVideoFifo.clear();
+            mAudioFifo.clear();
+            mIsReceiveStopSignal = false;
+            break;
+        }
+
+        // the index is just for debug
         ++packetIndex;
 
         // determine whether decoded frame is not enough
@@ -370,5 +381,4 @@ void LibavWorker::init()
 {
     mVideoFifo.clear();
     mAudioFifo.clear();
-    mCurrentPlaySecond = 0.0;
 }

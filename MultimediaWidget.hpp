@@ -1,12 +1,13 @@
 #ifndef MULTIMEDIAWIDGET_HPP
 #define MULTIMEDIAWIDGET_HPP
 
-#include "ui_MultimediaWidget.h"
-#include <QWidget>
 #include <vector>
+#include <QWidget>
 #include <QMainWindow>
 #include <QAudioOutput>
 #include <QTimer>
+#include <QString>
+#include "ui_MultimediaWidget.h"
 #include "AVInfo.hpp"
 #include "FrameFifo.hpp"
 
@@ -25,8 +26,9 @@ signals:
     void failAvFormat();
 
 public slots:
-    void startPlay( AVInfo aAvInfo );
-    void fetchAndPlay();
+    void getDecodeReadySig( AVInfo aAvInfo );
+    void renew();
+    void play( QString aFileName );
 
 private:
     void setupConnection();
