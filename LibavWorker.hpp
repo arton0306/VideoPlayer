@@ -52,6 +52,7 @@ private:
     FrameFifo mVideoFifo;
     FrameFifo mAudioFifo;
     bool mIsReceiveStopSignal;
+    bool mIsDecoding;
 };
 
 #endif // LIBAV_WORKER_HPP

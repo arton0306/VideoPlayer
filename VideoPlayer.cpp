@@ -1,4 +1,5 @@
 #include <cassert>
+#include <QFileDialog>
 #include "debug.hpp"
 #include "VideoPlayer.hpp"
 #include "MultimediaWidget.hpp"
@@ -17,8 +18,18 @@ VideoPlayer::VideoPlayer(QWidget *parent)
 
 void VideoPlayer::setupConnection()
 {
+    connect( mFileSelect, SIGNAL(pressed()), this, SLOT(openFile()) );
 }
 
 VideoPlayer::~VideoPlayer()
 {
+}
+
+void VideoPlayer::openFile()
+{
+    QString fileName = QFileDialog::getOpenFileName( this, tr("Open File"),
+                                                     ".",
+                                                     tr("Vidoes (*.mp4 *.mpg *.mpeg)"));
+    DEBUG() << fileName;
+    mMultimediaWidget->play( fileName );
 }

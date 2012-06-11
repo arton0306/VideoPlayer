@@ -13,6 +13,7 @@ using namespace std;
 LibavWorker::LibavWorker(QObject *parent)
     : QObject(parent)
     , mIsReceiveStopSignal( false )
+    , mIsDecoding( false )
 {
 }
 
@@ -80,7 +81,10 @@ void LibavWorker::dropNextVideoFrame()
 // can be called by player thread
 void LibavWorker::stopDecoding()
 {
-    mIsReceiveStopSignal = true;
+    if ( mIsDecoding )
+    {
+        mIsReceiveStopSignal = true;
+    }
 }
 
 void LibavWorker::setFileName( QString aFileName )
@@ -148,6 +152,8 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
     assert( mVideoFifo.getCount() == 0 );
     assert( mAudioFifo.getCount() == 0 );
 
+    mIsDecoding = true;
+
     /******************************************
                     Codec Init
     ******************************************/
@@ -202,8 +208,8 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
     int audioFrameIndex = 0;
     int packetIndex = 0;
     double const fps = av_q2d( formatCtx->streams[videoFrameIndex]->avg_frame_rate );
-    DEBUG() << "video fps:" << fps;
-    DEBUG() << "videoStreamIndex:" << videoStreamIndex << "    audioStreamIndex:" << audioStreamIndex;
+    //DEBUG() << "video fps:" << fps;
+    //DEBUG() << "videoStreamIndex:" << videoStreamIndex << "    audioStreamIndex:" << audioStreamIndex;
 
     ready( AVInfo(
         fps,
@@ -228,7 +234,7 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
         ++packetIndex;
 
         // determine whether decoded frame is not enough
-        while ( isAvFrameEnough( fps ) )
+        while ( isAvFrameEnough( fps ) && !mIsReceiveStopSignal )
         {
             // Sleep::usleep( 0.1 * 1.0 / fps * 1000000 );
             Sleep::msleep( 1 );
@@ -242,7 +248,7 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
             if ( bytesUsed != packet.size )
             {
                 // check if one packet is corresponding to one frame
-                DEBUG() << bytesUsed << " " << packet.size;
+                // DEBUG() << bytesUsed << " " << packet.size;
             }
 
             // Did we get a video frame?
@@ -316,13 +322,13 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
         {
             // Free the packet that was allocated by av_read_frame
             av_free_packet( &packet );
-            DEBUG() << "p ndx:" << packetIndex << "     packet.stream_index:" << packet.stream_index;
+            // DEBUG() << "p ndx:" << packetIndex << "     packet.stream_index:" << packet.stream_index;
         }
     }
 
     // av reach to the end
+    mIsDecoding = false;
     decodeDone();
-
 
     /******************************************
                 Release the Resource

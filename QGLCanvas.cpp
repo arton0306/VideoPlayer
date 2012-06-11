@@ -17,6 +17,13 @@ void QGLCanvas::renewFrame( uint8_t const * aPpmBuffer, int aPpmSize )
     update();
 }
 
+void QGLCanvas::clear()
+{
+    QImage image( 100, 100, QImage::Format_RGB32 );
+    setImage( image );
+    update();
+}
+
 void QGLCanvas::paintEvent(QPaintEvent*)
 {
     QPainter p(this);

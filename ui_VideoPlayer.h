@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'VideoPlayer.ui'
 **
-** Created: Sun Mar 11 20:33:10 2012
+** Created: Mon Jun 11 22:30:53 2012
 **      by: Qt User Interface Compiler version 4.7.4
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
@@ -37,8 +37,9 @@ public:
     QVBoxLayout *verticalLayout;
     QGridLayout *mVideoLayout;
     QHBoxLayout *horizontalLayout;
-    QPushButton *pushButton_3;
-    QPushButton *pushButton_2;
+    QPushButton *mFileSelect;
+    QPushButton *mPlayButton;
+    QPushButton *mStop;
     QSlider *horizontalSlider;
     QHBoxLayout *horizontalLayout_2;
     QPushButton *pushButton;
@@ -77,15 +78,20 @@ public:
         horizontalLayout = new QHBoxLayout();
         horizontalLayout->setSpacing(6);
         horizontalLayout->setObjectName(QString::fromUtf8("horizontalLayout"));
-        pushButton_3 = new QPushButton(centralWidget);
-        pushButton_3->setObjectName(QString::fromUtf8("pushButton_3"));
+        mFileSelect = new QPushButton(centralWidget);
+        mFileSelect->setObjectName(QString::fromUtf8("mFileSelect"));
 
-        horizontalLayout->addWidget(pushButton_3);
+        horizontalLayout->addWidget(mFileSelect);
 
-        pushButton_2 = new QPushButton(centralWidget);
-        pushButton_2->setObjectName(QString::fromUtf8("pushButton_2"));
+        mPlayButton = new QPushButton(centralWidget);
+        mPlayButton->setObjectName(QString::fromUtf8("mPlayButton"));
 
-        horizontalLayout->addWidget(pushButton_2);
+        horizontalLayout->addWidget(mPlayButton);
+
+        mStop = new QPushButton(centralWidget);
+        mStop->setObjectName(QString::fromUtf8("mStop"));
+
+        horizontalLayout->addWidget(mStop);
 
         horizontalSlider = new QSlider(centralWidget);
         horizontalSlider->setObjectName(QString::fromUtf8("horizontalSlider"));
@@ -161,8 +167,9 @@ public:
     {
         VideoPlayer->setWindowTitle(QApplication::translate("VideoPlayer", "VideoPlayer", 0, QApplication::UnicodeUTF8));
         actionSelectFile->setText(QApplication::translate("VideoPlayer", "SelectFile", 0, QApplication::UnicodeUTF8));
-        pushButton_3->setText(QApplication::translate("VideoPlayer", "Play", 0, QApplication::UnicodeUTF8));
-        pushButton_2->setText(QApplication::translate("VideoPlayer", "Stop", 0, QApplication::UnicodeUTF8));
+        mFileSelect->setText(QApplication::translate("VideoPlayer", "File", 0, QApplication::UnicodeUTF8));
+        mPlayButton->setText(QApplication::translate("VideoPlayer", "Play", 0, QApplication::UnicodeUTF8));
+        mStop->setText(QApplication::translate("VideoPlayer", "Stop", 0, QApplication::UnicodeUTF8));
         pushButton->setText(QApplication::translate("VideoPlayer", "Pitch +", 0, QApplication::UnicodeUTF8));
         pushButton_4->setText(QApplication::translate("VideoPlayer", "Pitch -", 0, QApplication::UnicodeUTF8));
         pushButton_8->setText(QApplication::translate("VideoPlayer", "Vol +", 0, QApplication::UnicodeUTF8));

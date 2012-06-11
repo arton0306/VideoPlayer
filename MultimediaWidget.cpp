@@ -98,13 +98,13 @@ void MultimediaWidget::renew()
         if ( absdiff < 0.55 * 1.0 / mCurrentAvInfo.getFps() )
         {
             vector<uint8> videoFrameStream = mLibavWorker->popNextVideoFrame();
-            DEBUG() << "frame should be presented:" << nextVideoFrameSecond << "\t currentSount:" << currentPlaySecond;
+            // DEBUG() << "frame should be presented:" << nextVideoFrameSecond << "\t currentSount:" << currentPlaySecond;
             videoCanvas->renewFrame( static_cast<uint8_t const *>( &videoFrameStream[0] ), videoFrameStream.size() );
         }
         else if ( diff > 0 )
         {
             // video frame too old
-            DEBUG() << "drop a frame which should be presented at:" << nextVideoFrameSecond << "\t currentSount:" << currentPlaySecond;
+            // DEBUG() << "drop a frame which should be presented at:" << nextVideoFrameSecond << "\t currentSount:" << currentPlaySecond;
             mLibavWorker->dropNextVideoFrame();
         }
     }
@@ -130,6 +130,9 @@ MultimediaWidget::~MultimediaWidget()
 
 void MultimediaWidget::play( QString aFileName )
 {
+    mAudioStreamBuffer.clear();
+    mTimer.stop();
+    mLibavWorker->stopDecoding();
     QMetaObject::invokeMethod( mLibavWorker, "decodeAudioVideo", Qt::QueuedConnection,
         Q_ARG(QString, aFileName) );
 }

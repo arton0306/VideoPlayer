@@ -10,6 +10,7 @@ class QGLCanvas : public QGLWidget
 public:
     QGLCanvas(QWidget* parent = NULL);
     void setImage(const QImage& image);
+    void clear();
 
 public slots:
     void renewFrame( uint8_t const * aPpmBuffer, int aPpmSize );
