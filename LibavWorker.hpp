@@ -51,7 +51,7 @@ private:
     QString mFileName;
     FrameFifo mVideoFifo;
     FrameFifo mAudioFifo;
-    bool mIsReceiveStopSignal;
+    bool mIsReceiveStopSignal; // if libav is in decoding loop, it will quit the loop when the flag be set true
     bool mIsDecoding;
 };
 

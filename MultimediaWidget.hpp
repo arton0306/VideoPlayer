@@ -29,6 +29,7 @@ public slots:
     void getDecodeReadySig( AVInfo aAvInfo );
     void renew();
     void play( QString aFileName );
+    void stop();
 
 private:
     void setupConnection();
@@ -40,7 +41,7 @@ private:
     LibavWorker * mLibavWorker;
 
     // the widget to play video
-    QGLCanvas * videoCanvas;
+    QGLCanvas * mVideoCanvas;
 
     // the objects to play audio
     QAudioOutput * mAudioOutput;

@@ -10,15 +10,15 @@ using namespace std;
 MultimediaWidget::MultimediaWidget(QWidget *parent)
     : QWidget(parent)
     , mLibavWorker( new LibavWorker )
-    , videoCanvas( NULL )
+    , mVideoCanvas( NULL )
     , mAudioOutput( NULL )
     , mOutputDevice( NULL )
 {
     setupUi(this);
     setupConnection();
 
-    videoCanvas = new QGLCanvas( this );
-    mMainLayout->addWidget( videoCanvas );
+    mVideoCanvas = new QGLCanvas( this );
+    mMainLayout->addWidget( mVideoCanvas );
 
     QThread * libavThread = new QThread;
     mLibavWorker->moveToThread( libavThread );
@@ -99,7 +99,7 @@ void MultimediaWidget::renew()
         {
             vector<uint8> videoFrameStream = mLibavWorker->popNextVideoFrame();
             // DEBUG() << "frame should be presented:" << nextVideoFrameSecond << "\t currentSount:" << currentPlaySecond;
-            videoCanvas->renewFrame( static_cast<uint8_t const *>( &videoFrameStream[0] ), videoFrameStream.size() );
+            mVideoCanvas->renewFrame( static_cast<uint8_t const *>( &videoFrameStream[0] ), videoFrameStream.size() );
         }
         else if ( diff > 0 )
         {
@@ -130,9 +130,15 @@ MultimediaWidget::~MultimediaWidget()
 
 void MultimediaWidget::play( QString aFileName )
 {
-    mAudioStreamBuffer.clear();
-    mTimer.stop();
-    mLibavWorker->stopDecoding();
+    stop();
     QMetaObject::invokeMethod( mLibavWorker, "decodeAudioVideo", Qt::QueuedConnection,
         Q_ARG(QString, aFileName) );
+}
+
+void MultimediaWidget::stop()
+{
+    mTimer.stop();
+    mVideoCanvas->clear();
+    mAudioStreamBuffer.clear();
+    mLibavWorker->stopDecoding();
 }

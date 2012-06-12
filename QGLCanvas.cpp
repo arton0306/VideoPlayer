@@ -19,7 +19,12 @@ void QGLCanvas::renewFrame( uint8_t const * aPpmBuffer, int aPpmSize )
 
 void QGLCanvas::clear()
 {
-    QImage image( 100, 100, QImage::Format_RGB32 );
+    // QImage image( 100, 100, QImage::Format_RGB32 );
+    QImage image( 1, 1, QImage::Format_RGB32 );
+    QRgb value;
+    value = qRgb( 0, 0, 0 ); // 0xffbd9527
+    image.setPixel( 0, 0, value );
+
     setImage( image );
     update();
 }

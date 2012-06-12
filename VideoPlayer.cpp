@@ -19,6 +19,7 @@ VideoPlayer::VideoPlayer(QWidget *parent)
 void VideoPlayer::setupConnection()
 {
     connect( mFileSelect, SIGNAL(pressed()), this, SLOT(openFile()) );
+    connect( mStop, SIGNAL(pressed()), this, SLOT(stop()) );
 }
 
 VideoPlayer::~VideoPlayer()
@@ -32,4 +33,9 @@ void VideoPlayer::openFile()
                                                      tr("Vidoes (*.mp4 *.mpg *.mpeg)"));
     DEBUG() << fileName;
     mMultimediaWidget->play( fileName );
+}
+
+void VideoPlayer::stop()
+{
+    mMultimediaWidget->stop();
 }

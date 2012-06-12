@@ -219,7 +219,7 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
         av_get_bytes_per_sample(audioCodecCtx->sample_fmt) * BITS_PER_BYTES
         ) );
 
-    while ( av_read_frame( formatCtx, &packet ) >= 0 )
+    while ( true )
     {
         // determine whether be forced stop
         if ( mIsReceiveStopSignal )
@@ -229,6 +229,9 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
             mIsReceiveStopSignal = false;
             break;
         }
+
+        // read a frame
+        if ( av_read_frame( formatCtx, &packet ) < 0 ) break;
 
         // the index is just for debug
         ++packetIndex;

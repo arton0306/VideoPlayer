@@ -18,6 +18,7 @@ signals:
 
 public slots:
     void openFile();
+    void stop();
 
 private:
     void setupConnection();
