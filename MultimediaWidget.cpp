@@ -13,6 +13,7 @@ MultimediaWidget::MultimediaWidget(QWidget *parent)
     , mVideoCanvas( NULL )
     , mAudioOutput( NULL )
     , mOutputDevice( NULL )
+    , mIsDecodeDone( false )
 {
     setupUi(this);
     setupConnection();
@@ -29,6 +30,7 @@ MultimediaWidget::MultimediaWidget(QWidget *parent)
 void MultimediaWidget::setupConnection()
 {
     connect( mLibavWorker, SIGNAL(ready( AVInfo )), this, SLOT(getDecodeReadySig( AVInfo )) );
+    connect( mLibavWorker, SIGNAL(decodeDone()), this, SLOT(getDecodeDoneSig()) );
     connect( &mTimer, SIGNAL(timeout()), this, SLOT(renew()) );
 }
 
@@ -108,6 +110,13 @@ void MultimediaWidget::renew()
             mLibavWorker->dropNextVideoFrame();
         }
     }
+    else // there are no frame got
+    {
+        if ( mIsDecodeDone )
+        {
+            stop();
+        }
+    }
 }
 
 QAudioFormat MultimediaWidget::getAudioFormat( AVInfo const & aAvInfo ) const
@@ -142,3 +151,9 @@ void MultimediaWidget::stop()
     mAudioStreamBuffer.clear();
     mLibavWorker->stopDecoding();
 }
+
+void MultimediaWidget::getDecodeDoneSig()
+{
+    mIsDecodeDone = true;
+}
+

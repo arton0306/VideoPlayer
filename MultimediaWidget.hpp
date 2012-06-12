@@ -30,12 +30,15 @@ public slots:
     void renew();
     void play( QString aFileName );
     void stop();
+    void getDecodeDoneSig();
 
 private:
     void setupConnection();
     QAudioFormat getAudioFormat( AVInfo const & aAvInfo ) const;
     double getAudioPlayedSecond() const;
     double getRenewPeriod( double a_fps ) const;
+
+    static int const CHECK_RENEW_MSEC = 5;
 
     // the decoded thread
     LibavWorker * mLibavWorker;
@@ -53,6 +56,9 @@ private:
 
     // timer to fetch decoded frame
     QTimer mTimer;
+
+    // flag
+    bool mIsDecodeDone;
 };
 
 #endif // MULTIMEDIAWIDGET_HPP

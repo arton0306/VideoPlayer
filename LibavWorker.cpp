@@ -81,6 +81,8 @@ void LibavWorker::dropNextVideoFrame()
 // can be called by player thread
 void LibavWorker::stopDecoding()
 {
+    mVideoFifo.clear();
+    mAudioFifo.clear();
     if ( mIsDecoding )
     {
         mIsReceiveStopSignal = true;
