@@ -383,6 +383,7 @@ void LibavWorker::appendPcmToFile( void const * aPcmBuffer, int aPcmSize, char c
     fclose( outfile );
 }
 
+// for the time being, the fps is not related to the determenator
 bool LibavWorker::isAvFrameEnough( double a_fps ) const
 {
     return ( min( mVideoFifo.getCount(), mAudioFifo.getCount() ) > 1 );

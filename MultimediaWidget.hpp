@@ -6,6 +6,7 @@
 #include <QMainWindow>
 #include <QAudioOutput>
 #include <QTimer>
+#include <QTime>
 #include <QString>
 #include "ui_MultimediaWidget.h"
 #include "AVInfo.hpp"
@@ -56,6 +57,11 @@ private:
 
     // timer to fetch decoded frame
     QTimer mTimer;
+
+    // outside clock, independent to audio and video time
+    // The QTime is so suck that it can not be adjusted and start correctly, we use a var to deal with it
+    mutable QTime mOutsideTime;
+    mutable int mAdjustMs;
 
     // flag
     bool mIsDecodeDone;
