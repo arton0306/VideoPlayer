@@ -13,6 +13,8 @@ using namespace std;
 LibavWorker::LibavWorker(QObject *parent)
     : QObject(parent)
     , mIsReceiveStopSignal( false )
+    , mIsReceiveSeekSignal( false )
+    , mSeekMSec( 0 )
     , mIsDecoding( false )
 {
 }
@@ -78,11 +80,18 @@ void LibavWorker::dropNextVideoFrame()
     }
 }
 
+// can be called by other thread
+void LibavWorker::seek( int aMSec )
+{
+    mSeekMSec = aMSec;
+    mIsReceiveSeekSignal = true;
+}
+
 // can be called by player thread
+// decode thread will check mIsReceiveStopSignal in each decoding round,
+// if the flag is true, it clear all av buffer and break out of the decoding loop.
 void LibavWorker::stopDecoding()
 {
-    mVideoFifo.clear();
-    mAudioFifo.clear();
     if ( mIsDecoding )
     {
         mIsReceiveStopSignal = true;
@@ -230,6 +239,24 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
             mAudioFifo.clear();
             mIsReceiveStopSignal = false;
             break;
+        }
+
+        // determine whether seek or not
+        if ( mIsReceiveSeekSignal || packetIndex == 277 )
+        {
+            mVideoFifo.clear();
+            mAudioFifo.clear();
+            mIsReceiveSeekSignal = false;
+            mSeekMSec = 100;
+            const long long INT64_MIN = (-0x7fffffffffffffffLL - 1);
+            const long long INT64_MAX = (9223372036854775807LL);
+            // const double AV_TIME_BASE = 1000000;
+            int ret = avformat_seek_file( formatCtx, -1, INT64_MIN, mSeekMSec * AV_TIME_BASE, INT64_MAX, 0);
+            seekState( ret < 0 );
+
+                // fprintf(stderr, "%s: could not seek to position %0.3f\n",
+                //       is->filename, (double)timestamp / AV_TIME_BASE);
+
         }
 
         // read a frame

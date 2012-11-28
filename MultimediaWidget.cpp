@@ -32,12 +32,12 @@ MultimediaWidget::MultimediaWidget(QWidget *parent)
 
 void MultimediaWidget::setupConnection()
 {
-    connect( mLibavWorker, SIGNAL(ready( AVInfo )), this, SLOT(getDecodeReadySig( AVInfo )) );
+    connect( mLibavWorker, SIGNAL(ready( AVInfo )), this, SLOT(getDecodeReadySignal( AVInfo )) );
     connect( mLibavWorker, SIGNAL(decodeDone()), this, SLOT(getDecodeDoneSig()) );
     connect( &mTimer, SIGNAL(timeout()), this, SLOT(renew()) );
 }
 
-void MultimediaWidget::getDecodeReadySig( AVInfo aAvInfo )
+void MultimediaWidget::getDecodeReadySignal( AVInfo aAvInfo )
 {
     mCurrentAvInfo = aAvInfo;
     mCurrentAvInfo.dump();
@@ -170,6 +170,10 @@ void MultimediaWidget::play( QString aFileName )
         Q_ARG(QString, aFileName) );
 }
 
+void MultimediaWidget::seek( int aMSec )
+{
+}
+
 void MultimediaWidget::stop()
 {
     mTimer.stop();
@@ -178,7 +182,7 @@ void MultimediaWidget::stop()
     mLibavWorker->stopDecoding();
 }
 
-void MultimediaWidget::getDecodeDoneSig()
+void MultimediaWidget::getDecodeDoneSignal()
 {
     mIsDecodeDone = true;
 }

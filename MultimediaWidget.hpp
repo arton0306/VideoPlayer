@@ -27,11 +27,13 @@ signals:
     void failAvFormat();
 
 public slots:
-    void getDecodeReadySig( AVInfo aAvInfo );
+    void getDecodeReadySignal( AVInfo aAvInfo );
+    void getDecodeDoneSignal();
+
     void renew();
     void play( QString aFileName );
+    void seek( int aMSec );
     void stop();
-    void getDecodeDoneSig();
 
 private:
     void setupConnection();

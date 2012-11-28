@@ -30,9 +30,11 @@ signals:
     void frameReady( uint8_t const * aPpmBuffer, int aPpmSize );
     void ready( AVInfo aAVInfo );
     void decodeDone();
+    void seekState( bool result );
 
 public slots:
     void decodeAudioVideo( QString aFileName );
+    void seek( int aMSec );
 
 private:
     void init();
@@ -52,6 +54,8 @@ private:
     FrameFifo mVideoFifo;
     FrameFifo mAudioFifo;
     bool mIsReceiveStopSignal; // if libav is in decoding loop, it will quit the loop when the flag be set true
+    bool mIsReceiveSeekSignal;
+    int mSeekMSec;             // other thread will set mIsReceiveSeekSignal and mSeekTime to notice libav thread
     bool mIsDecoding;
 };
 
