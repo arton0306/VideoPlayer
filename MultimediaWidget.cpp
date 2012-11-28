@@ -34,7 +34,7 @@ MultimediaWidget::MultimediaWidget(QWidget *parent)
 void MultimediaWidget::setupConnection()
 {
     connect( mLibavWorker, SIGNAL(ready( AVInfo )), this, SLOT(getDecodeReadySignal( AVInfo )) );
-    connect( mLibavWorker, SIGNAL(decodeDone()), this, SLOT(getDecodeDoneSig()) );
+    connect( mLibavWorker, SIGNAL(decodeDone()), this, SLOT(getDecodeDoneSignal()) );
     connect( mLibavWorker, SIGNAL(seekState(bool)), this, SLOT(getSeekStateSignal(bool)) );
     connect( &mTimer, SIGNAL(timeout()), this, SLOT(renew()) );
 }
@@ -63,6 +63,22 @@ void MultimediaWidget::getDecodeReadySignal( AVInfo aAvInfo )
 void MultimediaWidget::getSeekStateSignal(bool aResult)
 {
     DEBUG() << " =========================== seek result: " << aResult;
+    if ( aResult ) // true is success
+    {
+        mTimer.stop();
+        mVideoCanvas->clear();
+        mAudioStreamBuffer.clear();
+        mAudioOutput->stop();
+        // we don't need to delete mOutputDevice by try&error, TODO survey Qt source code
+        mOutputDevice = mAudioOutput->start();
+        mOutsideTime.restart();
+        mAdjustMs = 0;
+        mTimer.start( getRenewPeriod( mCurrentAvInfo.getFps() ) );
+    }
+    else
+    {
+        mAudioStartTimeMSec = mAudioStartTimeMSecPrev;
+    }
 }
 
 // the period is a function of fps
@@ -82,7 +98,7 @@ double MultimediaWidget::getAudioPlayedSecond() const
     qint64 const usPlayed = mAudioOutput->processedUSecs() - usInBuffer;
 
     // adjust the outside clock if needed
-    int const msQtPlay = static_cast<double>( usPlayed ) / 1000.0;
+    int const msQtPlay = mAudioStartTimeMSec + static_cast<double>( usPlayed ) / 1000.0;
     int const msSyncTime = mAudioStartTimeMSec + mOutsideTime.elapsed() + mAdjustMs;
 
     if ( msQtPlay - msSyncTime > 100.0 )
@@ -101,7 +117,7 @@ double MultimediaWidget::getAudioPlayedSecond() const
         }
     }
 
-    return ( mOutsideTime.elapsed() + mAdjustMs ) / 1000.0;
+    return ( mAudioStartTimeMSec + mOutsideTime.elapsed() + mAdjustMs ) / 1000.0;
 }
 
 void MultimediaWidget::renew()
@@ -182,17 +198,9 @@ void MultimediaWidget::play( QString aFileName )
 
 void MultimediaWidget::seek( int aMSec )
 {
-    mTimer.stop();
-    mVideoCanvas->clear();
-    mAudioStreamBuffer.clear();
     mLibavWorker->seek( aMSec );
-    mAudioOutput->stop();
-    // we don't need to delete mOutputDevice by try&error, TODO survey Qt source code
-    mOutputDevice = mAudioOutput->start();
+    mAudioStartTimeMSecPrev = mAudioStartTimeMSec;
     mAudioStartTimeMSec = aMSec;
-    mOutsideTime.restart();
-    mAdjustMs = 0;
-    mTimer.start( getRenewPeriod( mCurrentAvInfo.getFps() ) );
 }
 
 void MultimediaWidget::stop()
