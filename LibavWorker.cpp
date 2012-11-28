@@ -254,9 +254,9 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
             int ret = avformat_seek_file( formatCtx, -1, INT64_MIN, (double)mSeekMSec / 1000 * AV_TIME_BASE, INT64_MAX, 0);
             DEBUG() << "============================================================ seek " << (double)mSeekMSec / 1000 << " return:" << ret;
             if ( ret < 0 )
-                seekState( SEEK_FAIL );
+                seekState( false );
             else
-                seekState( SEEK_SUCCESS );
+                seekState( true );
         }
 
         // read a frame

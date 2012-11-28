@@ -36,7 +36,7 @@ signals:
     void frameReady( uint8_t const * aPpmBuffer, int aPpmSize );
     void ready( AVInfo aAVInfo );
     void decodeDone();
-    void seekState( SeekResult aResult );
+    void seekState( bool aResult );
 
 public slots:
     void decodeAudioVideo( QString aFileName );

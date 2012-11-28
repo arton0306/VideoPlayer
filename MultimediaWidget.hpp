@@ -29,7 +29,7 @@ signals:
 public slots:
     void getDecodeReadySignal( AVInfo aAvInfo );
     void getDecodeDoneSignal();
-    void getSeekStateSignal( LibavWorker::SeekResult aResult );
+    void getSeekStateSignal(bool aResult);
 
     void renew();
     void play( QString aFileName );

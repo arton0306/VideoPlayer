@@ -35,7 +35,7 @@ void MultimediaWidget::setupConnection()
 {
     connect( mLibavWorker, SIGNAL(ready( AVInfo )), this, SLOT(getDecodeReadySignal( AVInfo )) );
     connect( mLibavWorker, SIGNAL(decodeDone()), this, SLOT(getDecodeDoneSig()) );
-    connect( mLibavWorker, SIGNAL(seekState( LibavWorker::SeekResult )), this, SLOT(getSeekStateSignal( LibavWorker::SeekResult )) );
+    connect( mLibavWorker, SIGNAL(seekState(bool)), this, SLOT(getSeekStateSignal(bool)) );
     connect( &mTimer, SIGNAL(timeout()), this, SLOT(renew()) );
 }
 
@@ -60,7 +60,7 @@ void MultimediaWidget::getDecodeReadySignal( AVInfo aAvInfo )
     }
 }
 
-void MultimediaWidget::getSeekStateSignal( LibavWorker::SeekResult aResult )
+void MultimediaWidget::getSeekStateSignal(bool aResult)
 {
     DEBUG() << " =========================== seek result: " << aResult;
 }
