@@ -13,6 +13,7 @@ MultimediaWidget::MultimediaWidget(QWidget *parent)
     , mVideoCanvas( NULL )
     , mAudioOutput( NULL )
     , mOutputDevice( NULL )
+    , mAudioStartTimeMSec( 0 )
     , mAdjustMs( 0 )
     , mIsDecodeDone( false )
 {
@@ -34,6 +35,7 @@ void MultimediaWidget::setupConnection()
 {
     connect( mLibavWorker, SIGNAL(ready( AVInfo )), this, SLOT(getDecodeReadySignal( AVInfo )) );
     connect( mLibavWorker, SIGNAL(decodeDone()), this, SLOT(getDecodeDoneSig()) );
+    connect( mLibavWorker, SIGNAL(seekState( LibavWorker::SeekResult )), this, SLOT(getSeekStateSignal( LibavWorker::SeekResult )) );
     connect( &mTimer, SIGNAL(timeout()), this, SLOT(renew()) );
 }
 
@@ -53,8 +55,14 @@ void MultimediaWidget::getDecodeReadySignal( AVInfo aAvInfo )
         delete mAudioOutput;
         mAudioOutput = new QAudioOutput( format ); // the Qt example has 2nd augument - this
         mOutputDevice = mAudioOutput->start();
-        mTimer.start( getRenewPeriod( aAvInfo.getFps() ) );
+        mAudioStartTimeMSec = 0;
+        mTimer.start( getRenewPeriod( mCurrentAvInfo.getFps() ) );
     }
+}
+
+void MultimediaWidget::getSeekStateSignal( LibavWorker::SeekResult aResult )
+{
+    DEBUG() << " =========================== seek result: " << aResult;
 }
 
 // the period is a function of fps
@@ -75,7 +83,7 @@ double MultimediaWidget::getAudioPlayedSecond() const
 
     // adjust the outside clock if needed
     int const msQtPlay = static_cast<double>( usPlayed ) / 1000.0;
-    int const msSyncTime = mOutsideTime.elapsed() + mAdjustMs;
+    int const msSyncTime = mAudioStartTimeMSec + mOutsideTime.elapsed() + mAdjustMs;
 
     if ( msQtPlay - msSyncTime > 100.0 )
     {
@@ -126,15 +134,17 @@ void MultimediaWidget::renew()
         if ( absdiff < 0.01 )
         {
             vector<uint8> videoFrameStream = mLibavWorker->popNextVideoFrame();
-            // DEBUG() << "frame should be presented:" << nextVideoFrameSecond << "\t currentSount:" << currentPlaySecond;
+            DEBUG() << "frame should be presented:" << nextVideoFrameSecond << "\t currentSound:" << currentPlaySecond;
             mVideoCanvas->renewFrame( static_cast<uint8_t const *>( &videoFrameStream[0] ), videoFrameStream.size() );
         }
         else if ( diff > 0 )
         {
             // video frame too old
-            // DEBUG() << "drop a frame which should be presented at:" << nextVideoFrameSecond << "\t currentSount:" << currentPlaySecond;
+            DEBUG() << "drop a frame which should be presented at:" << nextVideoFrameSecond << "\t currentSound:" << currentPlaySecond;
             mLibavWorker->dropNextVideoFrame();
         }
+
+        DEBUG() << "test:" << nextVideoFrameSecond << "\t currentSound:" << currentPlaySecond;
     }
     else // there are no frame got
     {
@@ -172,6 +182,17 @@ void MultimediaWidget::play( QString aFileName )
 
 void MultimediaWidget::seek( int aMSec )
 {
+    mTimer.stop();
+    mVideoCanvas->clear();
+    mAudioStreamBuffer.clear();
+    mLibavWorker->seek( aMSec );
+    mAudioOutput->stop();
+    // we don't need to delete mOutputDevice by try&error, TODO survey Qt source code
+    mOutputDevice = mAudioOutput->start();
+    mAudioStartTimeMSec = aMSec;
+    mOutsideTime.restart();
+    mAdjustMs = 0;
+    mTimer.start( getRenewPeriod( mCurrentAvInfo.getFps() ) );
 }
 
 void MultimediaWidget::stop()

@@ -8,12 +8,12 @@
 #include <QTimer>
 #include <QTime>
 #include <QString>
+#include "LibavWorker.hpp"
 #include "ui_MultimediaWidget.h"
 #include "AVInfo.hpp"
 #include "FrameFifo.hpp"
 
 class QGLCanvas;
-class LibavWorker;
 
 class MultimediaWidget : public QWidget, private Ui::MultimediaWidget
 {
@@ -29,6 +29,7 @@ signals:
 public slots:
     void getDecodeReadySignal( AVInfo aAvInfo );
     void getDecodeDoneSignal();
+    void getSeekStateSignal( LibavWorker::SeekResult aResult );
 
     void renew();
     void play( QString aFileName );
@@ -53,6 +54,7 @@ private:
     QAudioOutput * mAudioOutput;
     QIODevice * mOutputDevice;
     std::vector<uint8> mAudioStreamBuffer;
+    int mAudioStartTimeMSec;
 
     // the infomation of the current playing multimedia
     AVInfo mCurrentAvInfo;

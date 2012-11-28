@@ -242,21 +242,21 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
         }
 
         // determine whether seek or not
-        if ( mIsReceiveSeekSignal || packetIndex == 277 )
+        if ( mIsReceiveSeekSignal )
         {
             mVideoFifo.clear();
             mAudioFifo.clear();
             mIsReceiveSeekSignal = false;
-            mSeekMSec = 100;
+
             const long long INT64_MIN = (-0x7fffffffffffffffLL - 1);
             const long long INT64_MAX = (9223372036854775807LL);
-            // const double AV_TIME_BASE = 1000000;
-            int ret = avformat_seek_file( formatCtx, -1, INT64_MIN, mSeekMSec * AV_TIME_BASE, INT64_MAX, 0);
-            seekState( ret < 0 );
-
-                // fprintf(stderr, "%s: could not seek to position %0.3f\n",
-                //       is->filename, (double)timestamp / AV_TIME_BASE);
-
+            // timestamp = seconds * AV_TIME_BASE
+            int ret = avformat_seek_file( formatCtx, -1, INT64_MIN, (double)mSeekMSec / 1000 * AV_TIME_BASE, INT64_MAX, 0);
+            DEBUG() << "============================================================ seek " << (double)mSeekMSec / 1000 << " return:" << ret;
+            if ( ret < 0 )
+                seekState( SEEK_FAIL );
+            else
+                seekState( SEEK_SUCCESS );
         }
 
         // read a frame
@@ -296,7 +296,7 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
 
                 // Dump pts and dts for debug
                 ++videoFrameIndex;
-                // DEBUG() << "p ndx:" << packetIndex << "    vf ndx:" << videoFrameIndex << "     PTS:" << packet.pts << "     DTS:" << packet.dts << " TimeBase:" << av_q2d(formatCtx->streams[videoStreamIndex]->time_base) << " *dts: " << packet.dts * av_q2d(formatCtx->streams[videoStreamIndex]->time_base);
+                DEBUG() << "p ndx:" << packetIndex << "    vf ndx:" << videoFrameIndex << "     PTS:" << packet.pts << "     DTS:" << packet.dts << " TimeBase:" << av_q2d(formatCtx->streams[videoStreamIndex]->time_base) << " *dts: " << packet.dts * av_q2d(formatCtx->streams[videoStreamIndex]->time_base);
             }
             else
             {

@@ -17,6 +17,12 @@ class LibavWorker : public QObject
 {
     Q_OBJECT
 public:
+    enum SeekResult
+    {
+        SEEK_SUCCESS,
+        SEEK_FAIL
+    };
+
     explicit LibavWorker(QObject *parent = 0);
 
 public: // for other thread
@@ -30,7 +36,7 @@ signals:
     void frameReady( uint8_t const * aPpmBuffer, int aPpmSize );
     void ready( AVInfo aAVInfo );
     void decodeDone();
-    void seekState( bool result );
+    void seekState( SeekResult aResult );
 
 public slots:
     void decodeAudioVideo( QString aFileName );
