@@ -357,7 +357,7 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
         }
 
         // determine whether decoded frame is not enough
-        while ( isAvFrameEnough( fps ) && !mIsReceiveStopSignal && !mIsReceiveStopSignal )
+        while ( isAvFrameEnough( fps ) && !mIsReceiveStopSignal && !mIsReceiveSeekSignal )
         {
             // Sleep::usleep( 0.1 * 1.0 / fps * 1000000 );
             Sleep::msleep( 1 );
