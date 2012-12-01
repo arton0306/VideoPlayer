@@ -66,7 +66,6 @@ void MultimediaWidget::getSeekStateSignal(bool aResult)
     if ( aResult ) // true is success
     {
         mTimer.stop();
-        mVideoCanvas->clear();
         mAudioStreamBuffer.clear();
         mAudioOutput->stop();
         // we don't need to delete mOutputDevice by try&error, TODO survey Qt source code
@@ -140,7 +139,7 @@ void MultimediaWidget::renew()
 
     // get the time of the next video frame in decoded buffer
     double const nextVideoFrameSecond = mLibavWorker->getNextVideoFrameSecond();
-    if ( nextVideoFrameSecond != 0.0 )
+    if ( nextVideoFrameSecond >= 0.0 )
     {
         // renew video frame if needed
         double const diff = currentPlaySecond - nextVideoFrameSecond;

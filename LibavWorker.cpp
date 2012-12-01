@@ -244,19 +244,23 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
         // determine whether seek or not
         if ( mIsReceiveSeekSignal )
         {
-            mVideoFifo.clear();
-            mAudioFifo.clear();
-            mIsReceiveSeekSignal = false;
-
             const long long INT64_MIN = (-0x7fffffffffffffffLL - 1);
             const long long INT64_MAX = (9223372036854775807LL);
             // timestamp = seconds * AV_TIME_BASE
             int ret = avformat_seek_file( formatCtx, -1, INT64_MIN, (double)mSeekMSec / 1000 * AV_TIME_BASE, INT64_MAX, 0);
             DEBUG() << "============================================================ seek " << (double)mSeekMSec / 1000 << " return:" << ret;
             if ( ret < 0 )
+            {
                 seekState( false );
+                DEBUG() << "============================================================ seek fail";
+            }
             else
+            {
                 seekState( true );
+                mVideoFifo.clear();
+                mAudioFifo.clear();
+            }
+            mIsReceiveSeekSignal = false;
         }
 
         // read a frame
