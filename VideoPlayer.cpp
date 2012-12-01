@@ -43,5 +43,5 @@ void VideoPlayer::stop()
 
 void VideoPlayer::seek()
 {
-    mMultimediaWidget->seek( 100000 );
+    mMultimediaWidget->seek( 0 );
 }

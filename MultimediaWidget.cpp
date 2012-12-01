@@ -149,7 +149,7 @@ void MultimediaWidget::renew()
         if ( absdiff < 0.01 )
         {
             vector<uint8> videoFrameStream = mLibavWorker->popNextVideoFrame();
-            DEBUG() << "frame should be presented:" << nextVideoFrameSecond << "\t currentSound:" << currentPlaySecond;
+            DEBUG() << "frame be drawed on the canvas, its exact time is:" << nextVideoFrameSecond << "\t currentSound:" << currentPlaySecond;
             mVideoCanvas->renewFrame( static_cast<uint8_t const *>( &videoFrameStream[0] ), videoFrameStream.size() );
         }
         else if ( diff > 0 )
@@ -159,10 +159,11 @@ void MultimediaWidget::renew()
             mLibavWorker->dropNextVideoFrame();
         }
 
-        DEBUG() << "test:" << nextVideoFrameSecond << "\t currentSound:" << currentPlaySecond;
+        DEBUG() << "next video frame:" << nextVideoFrameSecond << "\t currentSound:" << currentPlaySecond;
     }
     else // there are no frame got
     {
+        DEBUG() << "there are no video frame";
         if ( mIsDecodeDone )
         {
             stop();
@@ -197,6 +198,7 @@ void MultimediaWidget::play( QString aFileName )
 
 void MultimediaWidget::seek( int aMSec )
 {
+    DEBUG() << "someone click seek";
     mLibavWorker->seek( aMSec );
     mAudioStartTimeMSecPrev = mAudioStartTimeMSec;
     mAudioStartTimeMSec = aMSec;

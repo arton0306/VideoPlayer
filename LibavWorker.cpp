@@ -232,13 +232,15 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
 
     while ( true )
     {
+        bool stop_flag = false;
+
         // determine whether be forced stop
         if ( mIsReceiveStopSignal )
         {
             mVideoFifo.clear();
             mAudioFifo.clear();
             mIsReceiveStopSignal = false;
-            break;
+            stop_flag = true;
         }
 
         // determine whether seek or not
@@ -264,17 +266,10 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
         }
 
         // read a frame
-        if ( av_read_frame( formatCtx, &packet ) < 0 ) break;
+        if ( av_read_frame( formatCtx, &packet ) < 0 || stop_flag ) break;
 
         // the index is just for debug
         ++packetIndex;
-
-        // determine whether decoded frame is not enough
-        while ( isAvFrameEnough( fps ) && !mIsReceiveStopSignal )
-        {
-            // Sleep::usleep( 0.1 * 1.0 / fps * 1000000 );
-            Sleep::msleep( 1 );
-        }
 
         // Is this packet from the video stream?
         if ( packet.stream_index == videoStreamIndex )
@@ -360,6 +355,14 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
             av_free_packet( &packet );
             // DEBUG() << "p ndx:" << packetIndex << "     packet.stream_index:" << packet.stream_index;
         }
+
+        // determine whether decoded frame is not enough
+        while ( isAvFrameEnough( fps ) && !mIsReceiveStopSignal && !mIsReceiveStopSignal )
+        {
+            // Sleep::usleep( 0.1 * 1.0 / fps * 1000000 );
+            Sleep::msleep( 1 );
+        }
+
     }
 
     // av reach to the end
