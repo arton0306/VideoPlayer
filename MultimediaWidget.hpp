@@ -67,6 +67,7 @@ private:
     // The QTime is so suck that it can not be adjusted and start correctly, we use a var to deal with it
     mutable QTime mOutsideTime;
     mutable int mAdjustMs;
+    static double const sAdjustConditionMs;
 
     // flag
     bool mIsDecodeDone;
