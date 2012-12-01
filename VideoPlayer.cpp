@@ -18,9 +18,9 @@ VideoPlayer::VideoPlayer(QWidget *parent)
 
 void VideoPlayer::setupConnection()
 {
-    connect( mFileSelect, SIGNAL(pressed()), this, SLOT(openFile()) );
-    // connect( mStop, SIGNAL(pressed()), this, SLOT(stop()) );
-    connect( mStop, SIGNAL(pressed()), this, SLOT(seek()) );
+    connect( mFileSelectBtn, SIGNAL(pressed()), this, SLOT(openFile()) );
+    connect( mStopBtn, SIGNAL(pressed()), this, SLOT(stop()) );
+    connect( mPlayBtn, SIGNAL(pressed()), this, SLOT(seek()) );
 }
 
 VideoPlayer::~VideoPlayer()
