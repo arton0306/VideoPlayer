@@ -54,8 +54,8 @@ private:
     QAudioOutput * mAudioOutput;
     QIODevice * mOutputDevice;
     std::vector<uint8> mAudioStreamBuffer;
-    int mAudioStartTimeMSecPrev; // we should save this in case the seek fail
-    int mAudioStartTimeMSec;
+    int mAudioSeekTimeMSecPrev; // we should save this in case the seek fail
+    int mAudioSeekTimeMSec;
 
     // the infomation of the current playing multimedia
     AVInfo mCurrentAvInfo;

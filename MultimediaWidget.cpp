@@ -1,3 +1,4 @@
+#include <cmath> // for abs, there are a int version abs in cstdlib, we must include cmath to overwrite it
 #include <QThread>
 #include <cassert>
 #include "MultimediaWidget.hpp"
@@ -7,13 +8,14 @@
 
 using namespace std;
 
+static int debugTimer = 0;
 MultimediaWidget::MultimediaWidget(QWidget *parent)
     : QWidget(parent)
     , mLibavWorker( new LibavWorker )
     , mVideoCanvas( NULL )
     , mAudioOutput( NULL )
     , mOutputDevice( NULL )
-    , mAudioStartTimeMSec( 0 )
+    , mAudioSeekTimeMSec( 0 )
     , mAdjustMs( 0 )
     , mIsDecodeDone( false )
 {
@@ -55,7 +57,7 @@ void MultimediaWidget::getDecodeReadySignal( AVInfo aAvInfo )
         delete mAudioOutput;
         mAudioOutput = new QAudioOutput( format ); // the Qt example has 2nd augument - this
         mOutputDevice = mAudioOutput->start();
-        mAudioStartTimeMSec = 0;
+        mAudioSeekTimeMSec = 0;
         mTimer.start( getRenewPeriod( mCurrentAvInfo.getFps() ) );
     }
 }
@@ -72,11 +74,12 @@ void MultimediaWidget::getSeekStateSignal(bool aResult)
         mOutputDevice = mAudioOutput->start();
         mOutsideTime.restart();
         mAdjustMs = 0;
+        debugTimer = 0;
         mTimer.start( getRenewPeriod( mCurrentAvInfo.getFps() ) );
     }
     else
     {
-        mAudioStartTimeMSec = mAudioStartTimeMSecPrev;
+        mAudioSeekTimeMSec = mAudioSeekTimeMSecPrev;
     }
 }
 
@@ -91,36 +94,35 @@ double MultimediaWidget::getAudioPlayedSecond() const
 {
     assert( mAudioOutput->state() == QAudio::ActiveState || mAudioOutput->state() == QAudio::IdleState );
     // the played-time got by Qt lib has about 40ms error
-    // so we use a outside clock to sync audio&video, but we adjust the outside clock to match the played-time(by Qt) if the gap become too large
+    // so we use a outside clock to sync audio&video, but we adjust the outside clock to match the played-time(by Qt) if the gap become too large (>100 msec)
     qint64 const bytesInBuffer = mAudioOutput->bufferSize() - mAudioOutput->bytesFree();
     qint64 const usInBuffer = (qint64)(1000000) * bytesInBuffer / ( mCurrentAvInfo.getAudioChannel() * mCurrentAvInfo.getAudioBitsPerSample() / 8 ) / mCurrentAvInfo.getAudioSampleRate();
     qint64 const usPlayed = mAudioOutput->processedUSecs() - usInBuffer;
 
     // adjust the outside clock if needed
-    int const msQtPlay = mAudioStartTimeMSec + static_cast<double>( usPlayed ) / 1000.0;
-    int const msSyncTime = mAudioStartTimeMSec + mOutsideTime.elapsed() + mAdjustMs;
+    int const msQtPlay = mAudioSeekTimeMSec + static_cast<double>( usPlayed ) / 1000.0;
+    int const msSyncTime = mAudioSeekTimeMSec + mOutsideTime.elapsed() + mAdjustMs;
 
-    if ( msQtPlay - msSyncTime > 100.0 )
+    if ( std::abs( msQtPlay - msSyncTime ) > 100.0 )
     {
         mAdjustMs += msQtPlay - msSyncTime;
-    }
-    else if ( msSyncTime - msQtPlay > 100.0 )
-    {
-        if ( msQtPlay > 0 )
-        {
-            mAdjustMs -= msSyncTime - msQtPlay;
-        }
-        else // msQtPlay maybe negative (by Qt implement)
-        {
-            return 0;
-        }
+        DEBUG() << "qt_time: " << msQtPlay << "  sync_time: " << msSyncTime;
     }
 
-    return ( mAudioStartTimeMSec + mOutsideTime.elapsed() + mAdjustMs ) / 1000.0;
+    // msQtPlay maybe negative (by Qt implement), we don't return a nagtive number
+    return max( 0.0, ( mAudioSeekTimeMSec + mOutsideTime.elapsed() + mAdjustMs ) / 1000.0 );
 }
 
 void MultimediaWidget::renew()
 {
+    // deubg
+    if ( debugTimer == 0 )
+    {
+        debugTimer++;
+        DEBUG() << "**************** first renew ************************************************************************";
+        DEBUG() << "audio processed usecs:" << mAudioOutput->processedUSecs() << " outside time elapsed:" << mOutsideTime.elapsed();
+    }
+
     // fetch all the decoded audio data and push into audio device if the buffer is empty
     if ( mAudioStreamBuffer.empty() )
     {
@@ -143,16 +145,14 @@ void MultimediaWidget::renew()
     {
         // renew video frame if needed
         double const diff = currentPlaySecond - nextVideoFrameSecond;
-        double const absdiff = ( diff > 0 ? diff : -diff );
 
-        // if ( absdiff < 0.55 * 1.0 / mCurrentAvInfo.getFps() )
-        if ( absdiff < 0.01 )
+        if ( std::abs(diff) < 0.01 )
         {
             vector<uint8> videoFrameStream = mLibavWorker->popNextVideoFrame();
-            DEBUG() << "frame be drawed on the canvas, its exact time is:" << nextVideoFrameSecond << "\t currentSound:" << currentPlaySecond;
+            // DEBUG() << "frame be drawed on the canvas, its exact time is:" << nextVideoFrameSecond << "\t currentSound:" << currentPlaySecond << "abs_diff: " << abs(diff);
             mVideoCanvas->renewFrame( static_cast<uint8_t const *>( &videoFrameStream[0] ), videoFrameStream.size() );
         }
-        else if ( diff > 0 )
+        else if ( diff > 0.01 )
         {
             // video frame too old
             DEBUG() << "drop a frame which should be presented at:" << nextVideoFrameSecond << "\t currentSound:" << currentPlaySecond;
@@ -200,8 +200,8 @@ void MultimediaWidget::seek( int aMSec )
 {
     DEBUG() << "someone click seek";
     mLibavWorker->seek( aMSec );
-    mAudioStartTimeMSecPrev = mAudioStartTimeMSec;
-    mAudioStartTimeMSec = aMSec;
+    mAudioSeekTimeMSecPrev = mAudioSeekTimeMSec;
+    mAudioSeekTimeMSec = aMSec;
 }
 
 void MultimediaWidget::stop()
