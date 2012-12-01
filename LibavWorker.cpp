@@ -253,12 +253,12 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
             DEBUG() << "============================================================ seek " << (double)mSeekMSec / 1000 << " return:" << ret;
             if ( ret < 0 )
             {
-                seekState( false );
+                seekState( false, mSeekMSec );
                 DEBUG() << "============================================================ seek fail";
             }
             else
             {
-                seekState( true );
+                seekState( true, mSeekMSec );
                 mVideoFifo.clear();
                 mAudioFifo.clear();
             }

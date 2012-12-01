@@ -15,8 +15,8 @@ MultimediaWidget::MultimediaWidget(QWidget *parent)
     , mVideoCanvas( NULL )
     , mAudioOutput( NULL )
     , mOutputDevice( NULL )
-    , mAudioSeekTimeMSec( 0 )
     , mAdjustMs( 0 )
+    , mAudioSeekTimeMSec( 0.0 )
     , mIsDecodeDone( false )
 {
     setupUi(this);
@@ -37,7 +37,7 @@ void MultimediaWidget::setupConnection()
 {
     connect( mLibavWorker, SIGNAL(ready( AVInfo )), this, SLOT(getDecodeReadySignal( AVInfo )) );
     connect( mLibavWorker, SIGNAL(decodeDone()), this, SLOT(getDecodeDoneSignal()) );
-    connect( mLibavWorker, SIGNAL(seekState(bool)), this, SLOT(getSeekStateSignal(bool)) );
+    connect( mLibavWorker, SIGNAL(seekState(bool, double)), this, SLOT(getSeekStateSignal(bool, double)) );
     connect( &mTimer, SIGNAL(timeout()), this, SLOT(renew()) );
 }
 
@@ -62,10 +62,10 @@ void MultimediaWidget::getDecodeReadySignal( AVInfo aAvInfo )
     }
 }
 
-void MultimediaWidget::getSeekStateSignal(bool aResult)
+void MultimediaWidget::getSeekStateSignal(bool aIsSuccess, double aSeekMs)
 {
-    DEBUG() << " =========================== seek result: " << aResult;
-    if ( aResult ) // true is success
+    DEBUG() << " =========================== seek result: " << aIsSuccess;
+    if ( aIsSuccess ) // true is success
     {
         mTimer.stop();
         mAudioStreamBuffer.clear();
@@ -76,10 +76,7 @@ void MultimediaWidget::getSeekStateSignal(bool aResult)
         mAdjustMs = 0;
         debugTimer = 0;
         mTimer.start( getRenewPeriod( mCurrentAvInfo.getFps() ) );
-    }
-    else
-    {
-        mAudioSeekTimeMSec = mAudioSeekTimeMSecPrev;
+        mAudioSeekTimeMSec = aSeekMs;
     }
 }
 
@@ -90,12 +87,12 @@ double MultimediaWidget::getRenewPeriod( double a_fps ) const
     return 5;
 }
 
-double const MultimediaWidget::sAdjustConditionMs = 150.0;
+double const MultimediaWidget::sAudioAdjustGapMs = 150.0;
 double MultimediaWidget::getAudioPlayedSecond() const
 {
     assert( mAudioOutput->state() == QAudio::ActiveState || mAudioOutput->state() == QAudio::IdleState );
     // the played-time got by Qt lib has about 40ms error
-    // so we use a outside clock to sync audio&video, but we adjust the outside clock to match the played-time(by Qt) if the gap become too large ( >sAdjustConditionMs )
+    // so we use a outside clock to sync audio&video, but we adjust the outside clock to match the played-time(by Qt) if the gap become too large ( >sAudioAdjustGapMs )
     qint64 const bytesInBuffer = mAudioOutput->bufferSize() - mAudioOutput->bytesFree();
     qint64 const usInBuffer = (qint64)(1000000) * bytesInBuffer / ( mCurrentAvInfo.getAudioChannel() * mCurrentAvInfo.getAudioBitsPerSample() / 8 ) / mCurrentAvInfo.getAudioSampleRate();
     qint64 const usPlayed = mAudioOutput->processedUSecs() - usInBuffer;
@@ -104,7 +101,7 @@ double MultimediaWidget::getAudioPlayedSecond() const
     double const msQtPlay = mAudioSeekTimeMSec + static_cast<double>( usPlayed ) / 1000.0;
     double const msSyncTime = mAudioSeekTimeMSec + mOutsideTime.elapsed() + mAdjustMs;
 
-    if ( std::abs( msQtPlay - msSyncTime ) > MultimediaWidget::sAdjustConditionMs )
+    if ( std::abs( msQtPlay - msSyncTime ) > MultimediaWidget::sAudioAdjustGapMs )
     {
         mAdjustMs += msQtPlay - msSyncTime;
         DEBUG() << "qt_time: " << msQtPlay << "  sync_time: " << msSyncTime;
@@ -201,8 +198,6 @@ void MultimediaWidget::seek( int aMSec )
 {
     DEBUG() << "someone click seek";
     mLibavWorker->seek( aMSec );
-    mAudioSeekTimeMSecPrev = mAudioSeekTimeMSec;
-    mAudioSeekTimeMSec = aMSec;
 }
 
 void MultimediaWidget::stop()
@@ -211,6 +206,7 @@ void MultimediaWidget::stop()
     mVideoCanvas->clear();
     mAudioStreamBuffer.clear();
     mLibavWorker->stopDecoding();
+    mAudioSeekTimeMSec = 0.0;
 }
 
 void MultimediaWidget::getDecodeDoneSignal()

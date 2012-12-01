@@ -29,7 +29,7 @@ signals:
 public slots:
     void getDecodeReadySignal( AVInfo aAvInfo );
     void getDecodeDoneSignal();
-    void getSeekStateSignal(bool aResult);
+    void getSeekStateSignal(bool aIsSuccess, double aSeekMs);
 
     void renew();
     void play( QString aFileName );
@@ -42,8 +42,6 @@ private:
     double getAudioPlayedSecond() const;
     double getRenewPeriod( double a_fps ) const;
 
-    static int const CHECK_RENEW_MSEC = 5;
-
     // the decoded thread
     LibavWorker * mLibavWorker;
 
@@ -54,8 +52,6 @@ private:
     QAudioOutput * mAudioOutput;
     QIODevice * mOutputDevice;
     std::vector<uint8> mAudioStreamBuffer;
-    int mAudioSeekTimeMSecPrev; // we should save this in case the seek fail
-    int mAudioSeekTimeMSec;
 
     // the infomation of the current playing multimedia
     AVInfo mCurrentAvInfo;
@@ -67,7 +63,8 @@ private:
     // The QTime is so suck that it can not be adjusted and start correctly, we use a var to deal with it
     mutable QTime mOutsideTime;
     mutable int mAdjustMs;
-    static double const sAdjustConditionMs;
+    double mAudioSeekTimeMSec;
+    static double const sAudioAdjustGapMs;
 
     // flag
     bool mIsDecodeDone;
