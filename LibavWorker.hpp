@@ -34,9 +34,10 @@ public: // for other thread
 
 signals:
     void frameReady( uint8_t const * aPpmBuffer, int aPpmSize );
-    void ready( AVInfo aAVInfo );
+    void readyToDecode( AVInfo aAVInfo );
+    void initAVFrameReady( double aFirstAudioFrameMsec );
     void decodeDone();
-    void seekState( bool aResult, double aSeekMSec );
+    void seekState( bool aResult );
 
 public slots:
     void decodeAudioVideo( QString aFileName );

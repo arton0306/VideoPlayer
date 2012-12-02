@@ -37,7 +37,7 @@ vector<uint8> FrameFifo::pop()
 }
 
 // return negtive if the fifo is empty
-double FrameFifo::getFrontFrameTime() const
+double FrameFifo::getFrontFrameSecond() const
 {
     double result = -100.0;
     mMutex.lock();

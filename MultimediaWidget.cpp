@@ -35,13 +35,14 @@ MultimediaWidget::MultimediaWidget(QWidget *parent)
 
 void MultimediaWidget::setupConnection()
 {
-    connect( mLibavWorker, SIGNAL(ready( AVInfo )), this, SLOT(getDecodeReadySignal( AVInfo )) );
+    connect( mLibavWorker, SIGNAL(readyToDecode( AVInfo )), this, SLOT(getReadyToDecodeSignal( AVInfo )) );
     connect( mLibavWorker, SIGNAL(decodeDone()), this, SLOT(getDecodeDoneSignal()) );
-    connect( mLibavWorker, SIGNAL(seekState(bool, double)), this, SLOT(getSeekStateSignal(bool, double)) );
-    connect( &mTimer, SIGNAL(timeout()), this, SLOT(renew()) );
+    connect( mLibavWorker, SIGNAL(seekState(bool)), this, SLOT(getSeekStateSignal(bool)) );
+    connect( mLibavWorker, SIGNAL(initAVFrameReady(double)), this, SLOT(getInitAVFrameReadySignal(double)) );
+    connect( &mTimer, SIGNAL(timeout()), this, SLOT(updateAV()) );
 }
 
-void MultimediaWidget::getDecodeReadySignal( AVInfo aAvInfo )
+void MultimediaWidget::getReadyToDecodeSignal( AVInfo aAvInfo )
 {
     mCurrentAvInfo = aAvInfo;
     mCurrentAvInfo.dump();
@@ -62,7 +63,7 @@ void MultimediaWidget::getDecodeReadySignal( AVInfo aAvInfo )
     }
 }
 
-void MultimediaWidget::getSeekStateSignal(bool aIsSuccess, double aSeekMs)
+void MultimediaWidget::getSeekStateSignal(bool aIsSuccess)
 {
     DEBUG() << " =========================== seek result: " << aIsSuccess;
     if ( aIsSuccess ) // true is success
@@ -70,14 +71,19 @@ void MultimediaWidget::getSeekStateSignal(bool aIsSuccess, double aSeekMs)
         mTimer.stop();
         mAudioStreamBuffer.clear();
         mAudioOutput->stop();
-        // we don't need to delete mOutputDevice by try&error, TODO survey Qt source code
-        mOutputDevice = mAudioOutput->start();
-        mOutsideTime.restart();
-        mAdjustMs = 0;
-        debugTimer = 0;
-        mTimer.start( getRenewPeriod( mCurrentAvInfo.getFps() ) );
-        mAudioSeekTimeMSec = aSeekMs;
     }
+}
+
+void MultimediaWidget::getInitAVFrameReadySignal(double aFirstAudioFrameMsec)
+{
+    // we don't need to delete mOutputDevice by try&error, TODO survey Qt source code
+    mOutputDevice = mAudioOutput->start();
+    mOutsideTime.restart();
+    mAdjustMs = 0;
+    debugTimer = 0;
+    mAudioSeekTimeMSec = aFirstAudioFrameMsec;
+    DEBUG() << "libav seek from: " << aFirstAudioFrameMsec;
+    mTimer.start( getRenewPeriod( mCurrentAvInfo.getFps() ) );
 }
 
 // the period is a function of fps
@@ -111,13 +117,13 @@ double MultimediaWidget::getAudioPlayedSecond() const
     return ( mAudioSeekTimeMSec + mOutsideTime.elapsed() + mAdjustMs ) / 1000.0;
 }
 
-void MultimediaWidget::renew()
+void MultimediaWidget::updateAV()
 {
     // deubg
     if ( debugTimer == 0 )
     {
         debugTimer++;
-        DEBUG() << "**************** first renew ************************************************************************";
+        DEBUG() << "**************** first updateAV ************************************************************************";
         DEBUG() << "audio processed usecs:" << mAudioOutput->processedUSecs() << " outside time elapsed:" << mOutsideTime.elapsed();
     }
 
@@ -141,7 +147,7 @@ void MultimediaWidget::renew()
     double const nextVideoFrameSecond = mLibavWorker->getNextVideoFrameSecond();
     if ( nextVideoFrameSecond >= 0.0 )
     {
-        // renew video frame if needed
+        // updateAV video frame if needed
         double const diff = currentPlaySecond - nextVideoFrameSecond;
 
         if ( std::abs(diff) < 0.01 )

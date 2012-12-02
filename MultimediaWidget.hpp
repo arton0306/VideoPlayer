@@ -27,11 +27,12 @@ signals:
     void failAvFormat();
 
 public slots:
-    void getDecodeReadySignal( AVInfo aAvInfo );
+    void getReadyToDecodeSignal( AVInfo aAvInfo );
     void getDecodeDoneSignal();
-    void getSeekStateSignal(bool aIsSuccess, double aSeekMs);
+    void getSeekStateSignal(bool aIsSuccess);
+    void getInitAVFrameReadySignal(double aFirstAudioFrameMsec);
 
-    void renew();
+    void updateAV();
     void play( QString aFileName );
     void seek( int aMSec );
     void stop();
