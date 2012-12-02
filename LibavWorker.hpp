@@ -42,13 +42,18 @@ signals:
 public slots:
     void decodeAudioVideo( QString aFileName );
     void seek( int aMSec );
+    void dumpAVStream();
 
 private:
     void init();
-    std::vector<uint8> convertToUint8Stream( AVFrame *aDecodedFrame, int width, int height );
-    void appendPcmToFile( void const * aPcmBuffer, int aPcmSize, char const * aFileName );
+    std::vector<uint8> convertToPpmFrame( AVFrame *aDecodedFrame, int width, int height );
     void setFileName( QString aFileName );
     bool isAvFrameEnough( double a_fps ) const;
+
+    // debug info
+    void saveAVInfoToFile( AVInfo const & aAVInfo, char const * aFileName );
+    void appendAudioPcmToFile( void const * aPcmBuffer, int aPcmSize, char const * aFileName );
+    void saveVideoPpmToFile( std::vector<uint8> ppmFrame, char const * aFileName );
 
     // libav
     int readHeader( AVFormatContext ** aFormatCtx );
@@ -64,6 +69,7 @@ private:
     bool mIsReceiveSeekSignal;
     int mSeekMSec;             // other thread will set mIsReceiveSeekSignal and mSeekTime to notice libav thread
     bool mIsDecoding;
+    bool isAvDumpNeeded;
 };
 
 #endif // LIBAV_WORKER_HPP

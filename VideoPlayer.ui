@@ -90,6 +90,13 @@
          </widget>
         </item>
         <item>
+         <widget class="QPushButton" name="mStereoChnlBtn">
+          <property name="text">
+           <string>Stereo</string>
+          </property>
+         </widget>
+        </item>
+        <item>
          <widget class="QPushButton" name="mRightChnlBtn">
           <property name="text">
            <string>Right Chnl</string>
@@ -97,9 +104,9 @@
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="mStereoChnlBtn">
+         <widget class="QPushButton" name="mDumpAV">
           <property name="text">
-           <string>Stereo</string>
+           <string>AvStreamDump</string>
           </property>
          </widget>
         </item>

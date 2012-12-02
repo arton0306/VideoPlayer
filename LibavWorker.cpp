@@ -1,5 +1,6 @@
 #include <cassert>
 #include <algorithm>
+#include <fstream>
 #include <QThread>
 #include "LibavWorker.hpp"
 #include "QtSleepHacker.hpp"
@@ -16,10 +17,11 @@ LibavWorker::LibavWorker(QObject *parent)
     , mIsReceiveSeekSignal( false )
     , mSeekMSec( 0 )
     , mIsDecoding( false )
+    , isAvDumpNeeded( false )
 {
 }
 
-vector<uint8> LibavWorker::convertToUint8Stream( AVFrame *aDecodedFrame, int width, int height )
+vector<uint8> LibavWorker::convertToPpmFrame( AVFrame *aDecodedFrame, int width, int height )
 {
     // Write ppm header to a temp buffer
     char ppmHeader[30];
@@ -85,6 +87,11 @@ void LibavWorker::seek( int aMSec )
 {
     mSeekMSec = aMSec;
     mIsReceiveSeekSignal = true;
+}
+
+void LibavWorker::dumpAVStream()
+{
+    isAvDumpNeeded = true;
 }
 
 // can be called by player thread
@@ -222,13 +229,10 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
     //DEBUG() << "video fps:" << fps;
     //DEBUG() << "videoStreamIndex:" << videoStreamIndex << "    audioStreamIndex:" << audioStreamIndex;
 
-    readyToDecode( AVInfo(
-        fps,
-        formatCtx->duration,
-        audioCodecCtx->channels,
-        audioCodecCtx->sample_rate,
-        av_get_bytes_per_sample(audioCodecCtx->sample_fmt) * BITS_PER_BYTES
-        ) );
+    AVInfo avInfo( fps, formatCtx->duration, audioCodecCtx->channels, audioCodecCtx->sample_rate,
+                   av_get_bytes_per_sample(audioCodecCtx->sample_fmt) * BITS_PER_BYTES );
+    if ( isAvDumpNeeded ) saveAVInfoToFile( avInfo, (mFileName + ".avinfo.txt").toStdString().c_str());
+    readyToDecode( avInfo );
 
     bool is_new_decode_request = true; // true if ther users want to decode from new position.
 
@@ -289,17 +293,22 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
             // Did we get a video frame?
             if ( frameFinished )
             {
+                double const dtsSec = packet.dts * av_q2d(formatCtx->streams[videoStreamIndex]->time_base );
                 convertToRGBFrame( videoCodecCtx, decodedFrame, pFrameRGB );
+                vector<uint8> ppmFrame = convertToPpmFrame( pFrameRGB, videoCodecCtx->width, videoCodecCtx->height );
+                if ( isAvDumpNeeded )
+                {
+                    QString dtsMsecString = QString("%1").arg(int(dtsSec*1000));
+                    QString ppmFileName = mFileName + "." + QString( 8 - dtsMsecString.size(), '0' ) + dtsMsecString + ".ppm";
+                    saveVideoPpmToFile( ppmFrame, ppmFileName.toStdString().c_str());
+                }
 
                 // fill in our ppm buffer
-                mVideoFifo.push(
-                    convertToUint8Stream( pFrameRGB, videoCodecCtx->width, videoCodecCtx->height ),
-                    packet.dts * av_q2d(formatCtx->streams[videoStreamIndex]->time_base )
-                    );
+                mVideoFifo.push( ppmFrame, dtsSec );
 
                 // Dump pts and dts for debug
                 ++videoFrameIndex;
-                DEBUG() << "p ndx:" << packetIndex << "    video frame ndx:" << videoFrameIndex << "     PTS:" << packet.pts << "     DTS:" << packet.dts << " TimeBase:" << av_q2d(formatCtx->streams[videoStreamIndex]->time_base) << " *dts: " << packet.dts * av_q2d(formatCtx->streams[videoStreamIndex]->time_base);
+                DEBUG() << "p ndx:" << packetIndex << "    video frame ndx:" << videoFrameIndex << "     PTS:" << packet.pts << "     DTS:" << packet.dts << " TimeBase:" << av_q2d(formatCtx->streams[videoStreamIndex]->time_base) << " *dts: " << dtsSec;
             }
             else
             {
@@ -335,7 +344,9 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
                         memcpy( &decodedStream[0], decodedFrame->data[0], data_size );
                         mAudioFifo.push( decodedStream, av_q2d(formatCtx->streams[audioStreamIndex]->time_base) * packet.pts );
 
-                        // appendPcmToFile( decodedFrame->data[0], data_size, "pcm.pcm" ); // this will spend lots time, which will cause the delay in video
+                        if ( isAvDumpNeeded )
+                            appendAudioPcmToFile( decodedFrame->data[0], data_size, (mFileName + ".pcm").toStdString().c_str() ); // this will spend lots time, which will cause the delay in video
+
                         ++audioFrameIndex;
                         DEBUG() << "p ndx:" << packetIndex << "     audio frame ndx:" << audioFrameIndex << "     PTS:" << packet.pts << "     DTS:" << packet.dts << " TimeBase:" << av_q2d(formatCtx->streams[audioStreamIndex]->time_base) << " *dts:" << av_q2d(formatCtx->streams[audioStreamIndex]->time_base) * packet.pts;
                     }
@@ -417,12 +428,33 @@ void LibavWorker::convertToRGBFrame( AVCodecContext * videoCodecCtx, AVFrame * d
 }
 
 // this will spend lots time, which will cause the delay in video
-void LibavWorker::appendPcmToFile( void const * aPcmBuffer, int aPcmSize, char const * aFileName )
+void LibavWorker::appendAudioPcmToFile( void const * aPcmBuffer, int aPcmSize, char const * aFileName )
 {
     FILE * outfile = fopen( aFileName, "ab" );
     assert( outfile );
     fwrite( aPcmBuffer, 1, aPcmSize, outfile );
     fclose( outfile );
+}
+
+void LibavWorker::saveVideoPpmToFile( vector<uint8> aPpmFrame, char const * aFileName )
+{
+    FILE * outfile = fopen( aFileName, "wb" );
+    assert( outfile );
+    fwrite( &aPpmFrame[0], 1, aPpmFrame.size(), outfile );
+    fclose( outfile );
+}
+
+void LibavWorker::saveAVInfoToFile( AVInfo const & aAVInfo, char const * aFileName )
+{
+    fstream fp;
+    fp.open( aFileName, ios::out );
+    assert( fp );
+    fp << "fps:" << aAVInfo.getFps() << endl;
+    fp << "audio channel:" << aAVInfo.getAudioChannel() << endl;
+    fp << "audio sample rate:" << aAVInfo.getAudioSampleRate() << endl;
+    fp << "audio bits per sample:" << aAVInfo.getAudioBitsPerSample() << endl;
+    fp << "av length in msec:" << fixed << aAVInfo.getUsecs() / 1000.0 << endl;
+    fp.close();
 }
 
 // for the time being, the fps is not related to the determenator

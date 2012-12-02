@@ -215,6 +215,11 @@ void MultimediaWidget::stop()
     mAudioSeekTimeMSec = 0.0;
 }
 
+void MultimediaWidget::dumpAVStream()
+{
+    
+}
+
 void MultimediaWidget::getDecodeDoneSignal()
 {
     mIsDecodeDone = true;

@@ -36,6 +36,7 @@ public slots:
     void play( QString aFileName );
     void seek( int aMSec );
     void stop();
+    void dumpAVStream();
 
 private:
     void setupConnection();
