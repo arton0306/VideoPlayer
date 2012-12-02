@@ -40,5 +40,7 @@ FORMS    += VideoPlayer.ui \
 
 INCLUDEPATH += "$$_PRO_FILE_PWD_/libav/include/"
 INCLUDEPATH += "$$_PRO_FILE_PWD_/SDL/"
+INCLUDEPATH += "$$_PRO_FILE_PWD_/SoundTouch/include"
 
 LIBS += -L"$$_PRO_FILE_PWD_/libav/lib/"  -L"$$_PRO_FILE_PWD_/SDL/lib/" -lavcodec -lavdevice -lavfilter -lavformat -lavutil -lswscale -lSDLmain -lSDL
+LIBS += -L"$$_PRO_FILE_PWD_/SoundTouch/lib/" -lSoundTouch
