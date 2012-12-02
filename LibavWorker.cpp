@@ -13,6 +13,8 @@ using namespace std;
 LibavWorker::LibavWorker(QObject *parent)
     : QObject(parent)
     , mIsReceiveStopSignal( false )
+    , mIsReceiveSeekSignal( false )
+    , mSeekMSec( 0 )
     , mIsDecoding( false )
 {
 }
@@ -66,7 +68,7 @@ vector<uint8> LibavWorker::popNextVideoFrame()
 // can be called by player thread
 double LibavWorker::getNextVideoFrameSecond() const
 {
-    return mVideoFifo.getFrontFrameTime();
+    return mVideoFifo.getFrontFrameSecond();
 }
 
 // can be called by player thread
@@ -78,11 +80,18 @@ void LibavWorker::dropNextVideoFrame()
     }
 }
 
+// can be called by other thread
+void LibavWorker::seek( int aMSec )
+{
+    mSeekMSec = aMSec;
+    mIsReceiveSeekSignal = true;
+}
+
 // can be called by player thread
+// decode thread will check mIsReceiveStopSignal in each decoding round,
+// if the flag is true, it clear all av buffer and break out of the decoding loop.
 void LibavWorker::stopDecoding()
 {
-    mVideoFifo.clear();
-    mAudioFifo.clear();
     if ( mIsDecoding )
     {
         mIsReceiveStopSignal = true;
@@ -213,7 +222,7 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
     //DEBUG() << "video fps:" << fps;
     //DEBUG() << "videoStreamIndex:" << videoStreamIndex << "    audioStreamIndex:" << audioStreamIndex;
 
-    ready( AVInfo(
+    readyToDecode( AVInfo(
         fps,
         formatCtx->duration,
         audioCodecCtx->channels,
@@ -221,29 +230,50 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
         av_get_bytes_per_sample(audioCodecCtx->sample_fmt) * BITS_PER_BYTES
         ) );
 
+    bool is_new_decode_request = true; // true if ther users want to decode from new position.
+
     while ( true )
     {
+        bool stop_flag = false;
+
         // determine whether be forced stop
         if ( mIsReceiveStopSignal )
         {
             mVideoFifo.clear();
             mAudioFifo.clear();
             mIsReceiveStopSignal = false;
-            break;
+            stop_flag = true;
+        }
+
+        // determine whether seek or not
+        if ( mIsReceiveSeekSignal )
+        {
+            const long long INT64_MIN = (-0x7fffffffffffffffLL - 1);
+            const long long INT64_MAX = (9223372036854775807LL);
+            // timestamp = seconds * AV_TIME_BASE
+            int ret = avformat_seek_file( formatCtx, -1, INT64_MIN, (double)mSeekMSec / 1000 * AV_TIME_BASE, INT64_MAX, 0);
+            DEBUG() << "============================================================ seek " << (double)mSeekMSec / 1000 << " return:" << ret;
+            if ( ret < 0 )
+            {
+                seekState( false );
+                is_new_decode_request = false;
+                DEBUG() << "============================================================ seek fail";
+            }
+            else
+            {
+                seekState( true );
+                is_new_decode_request = true;
+                mVideoFifo.clear();
+                mAudioFifo.clear();
+            }
+            mIsReceiveSeekSignal = false;
         }
 
         // read a frame
-        if ( av_read_frame( formatCtx, &packet ) < 0 ) break;
+        if ( av_read_frame( formatCtx, &packet ) < 0 || stop_flag ) break;
 
         // the index is just for debug
         ++packetIndex;
-
-        // determine whether decoded frame is not enough
-        while ( isAvFrameEnough( fps ) && !mIsReceiveStopSignal )
-        {
-            // Sleep::usleep( 0.1 * 1.0 / fps * 1000000 );
-            Sleep::msleep( 1 );
-        }
 
         // Is this packet from the video stream?
         if ( packet.stream_index == videoStreamIndex )
@@ -269,7 +299,7 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
 
                 // Dump pts and dts for debug
                 ++videoFrameIndex;
-                // DEBUG() << "p ndx:" << packetIndex << "    vf ndx:" << videoFrameIndex << "     PTS:" << packet.pts << "     DTS:" << packet.dts << " TimeBase:" << av_q2d(formatCtx->streams[videoStreamIndex]->time_base) << " *dts: " << packet.dts * av_q2d(formatCtx->streams[videoStreamIndex]->time_base);
+                DEBUG() << "p ndx:" << packetIndex << "    video frame ndx:" << videoFrameIndex << "     PTS:" << packet.pts << "     DTS:" << packet.dts << " TimeBase:" << av_q2d(formatCtx->streams[videoStreamIndex]->time_base) << " *dts: " << packet.dts * av_q2d(formatCtx->streams[videoStreamIndex]->time_base);
             }
             else
             {
@@ -307,7 +337,7 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
 
                         // appendPcmToFile( decodedFrame->data[0], data_size, "pcm.pcm" ); // this will spend lots time, which will cause the delay in video
                         ++audioFrameIndex;
-                        // DEBUG() << "p ndx:" << packetIndex << "     af ndx:" << audioFrameIndex << "     PTS:" << packet.pts << "     DTS:" << packet.dts << " TimeBase:" << av_q2d(formatCtx->streams[audioStreamIndex]->time_base) << " *dts:" << av_q2d(formatCtx->streams[audioStreamIndex]->time_base) * packet.pts;
+                        DEBUG() << "p ndx:" << packetIndex << "     audio frame ndx:" << audioFrameIndex << "     PTS:" << packet.pts << "     DTS:" << packet.dts << " TimeBase:" << av_q2d(formatCtx->streams[audioStreamIndex]->time_base) << " *dts:" << av_q2d(formatCtx->streams[audioStreamIndex]->time_base) * packet.pts;
                     }
                     else
                     {
@@ -329,6 +359,18 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
             av_free_packet( &packet );
             // DEBUG() << "p ndx:" << packetIndex << "     packet.stream_index:" << packet.stream_index;
         }
+
+        // determine whether decoded frame is enough and determine whether interrupt signal received
+        while ( isAvFrameEnough( fps ) && !mIsReceiveStopSignal && !mIsReceiveSeekSignal )
+        {
+            if ( is_new_decode_request )
+            {
+                initAVFrameReady( mAudioFifo.getFrontFrameSecond() * 1000);
+                is_new_decode_request = false;
+            }
+            Sleep::msleep( 1 );
+        }
+
     }
 
     // av reach to the end

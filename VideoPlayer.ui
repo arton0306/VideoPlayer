@@ -23,21 +23,21 @@
       <item>
        <layout class="QHBoxLayout" name="horizontalLayout">
         <item>
-         <widget class="QPushButton" name="mFileSelect">
+         <widget class="QPushButton" name="mFileSelectBtn">
           <property name="text">
            <string>File</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="mPlayButton">
+         <widget class="QPushButton" name="mPlayBtn">
           <property name="text">
            <string>Play</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="mStop">
+         <widget class="QPushButton" name="mStopBtn">
           <property name="text">
            <string>Stop</string>
           </property>
@@ -55,49 +55,49 @@
       <item>
        <layout class="QHBoxLayout" name="horizontalLayout_2">
         <item>
-         <widget class="QPushButton" name="pushButton">
+         <widget class="QPushButton" name="mPitchUpBtn">
           <property name="text">
            <string>Pitch +</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButton_4">
+         <widget class="QPushButton" name="mPitchDownBtn">
           <property name="text">
            <string>Pitch -</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButton_8">
+         <widget class="QPushButton" name="mVolUpBtn">
           <property name="text">
            <string>Vol +</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButton_9">
+         <widget class="QPushButton" name="mVolDownBtn">
           <property name="text">
            <string>Vol -</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButton_6">
+         <widget class="QPushButton" name="mLeftChnlBtn">
           <property name="text">
            <string>Left Chnl</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButton_7">
+         <widget class="QPushButton" name="mRightChnlBtn">
           <property name="text">
            <string>Right Chnl</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButton_5">
+         <widget class="QPushButton" name="mStereoChnlBtn">
           <property name="text">
            <string>Stereo</string>
           </property>

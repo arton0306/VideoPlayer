@@ -19,8 +19,8 @@ public:
     void push( std::vector<uint8> a_frame, double a_time );
     std::vector<uint8> pop();
     int getCount() const;
-    double getMaxTime() const;
-    double getFrontFrameTime() const;
+    double getMaxTime() const;  // not used for the time being
+    double getFrontFrameSecond() const;
     void clear();
 
 private:

@@ -8,12 +8,12 @@
 #include <QTimer>
 #include <QTime>
 #include <QString>
+#include "LibavWorker.hpp"
 #include "ui_MultimediaWidget.h"
 #include "AVInfo.hpp"
 #include "FrameFifo.hpp"
 
 class QGLCanvas;
-class LibavWorker;
 
 class MultimediaWidget : public QWidget, private Ui::MultimediaWidget
 {
@@ -27,19 +27,21 @@ signals:
     void failAvFormat();
 
 public slots:
-    void getDecodeReadySig( AVInfo aAvInfo );
-    void renew();
+    void getReadyToDecodeSignal( AVInfo aAvInfo );
+    void getDecodeDoneSignal();
+    void getSeekStateSignal(bool aIsSuccess);
+    void getInitAVFrameReadySignal(double aFirstAudioFrameMsec);
+
+    void updateAV();
     void play( QString aFileName );
+    void seek( int aMSec );
     void stop();
-    void getDecodeDoneSig();
 
 private:
     void setupConnection();
     QAudioFormat getAudioFormat( AVInfo const & aAvInfo ) const;
     double getAudioPlayedSecond() const;
     double getRenewPeriod( double a_fps ) const;
-
-    static int const CHECK_RENEW_MSEC = 5;
 
     // the decoded thread
     LibavWorker * mLibavWorker;
@@ -62,6 +64,8 @@ private:
     // The QTime is so suck that it can not be adjusted and start correctly, we use a var to deal with it
     mutable QTime mOutsideTime;
     mutable int mAdjustMs;
+    double mAudioSeekTimeMSec;
+    static double const sAudioAdjustGapMs;
 
     // flag
     bool mIsDecodeDone;

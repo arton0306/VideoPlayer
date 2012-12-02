@@ -17,6 +17,12 @@ class LibavWorker : public QObject
 {
     Q_OBJECT
 public:
+    enum SeekResult
+    {
+        SEEK_SUCCESS,
+        SEEK_FAIL
+    };
+
     explicit LibavWorker(QObject *parent = 0);
 
 public: // for other thread
@@ -28,11 +34,14 @@ public: // for other thread
 
 signals:
     void frameReady( uint8_t const * aPpmBuffer, int aPpmSize );
-    void ready( AVInfo aAVInfo );
+    void readyToDecode( AVInfo aAVInfo );
+    void initAVFrameReady( double aFirstAudioFrameMsec );
     void decodeDone();
+    void seekState( bool aResult );
 
 public slots:
     void decodeAudioVideo( QString aFileName );
+    void seek( int aMSec );
 
 private:
     void init();
@@ -52,6 +61,8 @@ private:
     FrameFifo mVideoFifo;
     FrameFifo mAudioFifo;
     bool mIsReceiveStopSignal; // if libav is in decoding loop, it will quit the loop when the flag be set true
+    bool mIsReceiveSeekSignal;
+    int mSeekMSec;             // other thread will set mIsReceiveSeekSignal and mSeekTime to notice libav thread
     bool mIsDecoding;
 };
 
