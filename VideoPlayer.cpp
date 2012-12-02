@@ -1,4 +1,5 @@
 #include <cassert>
+#include <QTimer>
 #include <QFileDialog>
 #include "debug.hpp"
 #include "VideoPlayer.hpp"
@@ -43,5 +44,14 @@ void VideoPlayer::stop()
 
 void VideoPlayer::seek()
 {
-    mMultimediaWidget->seek( 30000 );
+    int msec = 0;
+    #define SEEK_NOYSE_WORKAROUND
+    #ifdef SEEK_NOYSE_WORKAROUND
+        static int workaround = 0;
+        mMultimediaWidget->seek( msec );
+        if ( workaround++ % 2 == 0 )
+            QTimer::singleShot(50, this, SLOT(seek()));
+    #else
+        mMultimediaWidget->seek( msec );
+    #endif
 }
