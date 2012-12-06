@@ -3,7 +3,6 @@
 #include "VideoPlayer.hpp"
 #include "debug.hpp"
 #include "MultimediaWidget.hpp"
-#include "SoundTouch.h"
 
 int main(int argc, char *argv[])
 {
@@ -21,6 +20,5 @@ int main(int argc, char *argv[])
     VideoPlayer w;
     // MultimediaWidget w;
     w.show();
-    soundtouch::SoundTouch m_SoundTouch;
     return a.exec();
 }

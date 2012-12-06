@@ -20,7 +20,8 @@ SOURCES += \
     FrameFifo.cpp \
     AVInfo.cpp \
     Sleep.cpp \
-    MultimediaWidget.cpp
+    MultimediaWidget.cpp \
+    AudioTuner.cpp
 
 HEADERS += \
     VideoPlayer.hpp \
@@ -33,7 +34,8 @@ HEADERS += \
     FrameFifo.hpp \
     AVInfo.hpp \
     Sleep.hpp \
-    MultimediaWidget.hpp
+    MultimediaWidget.hpp \
+    AudioTuner.hpp
 
 FORMS    += VideoPlayer.ui \
     MultimediaWidget.ui
