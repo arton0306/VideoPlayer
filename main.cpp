@@ -33,8 +33,8 @@ int main(int argc, char *argv[])
     tuner.setPitchShiftInSemiTones( +3 );
 
     vector<unsigned char> buffer(1024, 0);
-    FILE * inputFile = fopen( "tools/Lelouch.mp4.pcm", "rb" );
-    FILE * outputFile = fopen( "tools/tunedLelouch.pcm", "ab" );
+    FILE * inputFile = fopen( "tools/10years.pcm", "rb" );
+    FILE * outputFile = fopen( "tools/10years.3tone_inc.pcm", "ab" );
 
     while ( !feof( inputFile ) )
     {

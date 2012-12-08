@@ -62,7 +62,11 @@ vector<uint8> AudioTuner::processPitchShift( vector<uint8> const & inputStream )
     int sampleProcessedCount;
     do
     {
+        static float iter = -20000.0;
+        iter += 1;
+        mSoundTouch.setPitchSemiTones( iter / 42638.0f * 16 );
         DEBUG() << "sound touch recevie samples";
+        DEBUG() << "ready samples :" << mSoundTouch.numSamples();
         sampleProcessedCount = mSoundTouch.receiveSamples(mBufferForProcess, BUFFER_SIZE / mChannel);
         DEBUG() << "write sample processed count: " << sampleProcessedCount;
         write( processedStream, processedStreamTail, sampleProcessedCount * mChannel);
