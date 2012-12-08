@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <cstring>
 #include "AudioTuner.hpp"
+#include "debug.hpp"
 
 using namespace std;
 using namespace soundtouch;
@@ -10,7 +11,7 @@ AudioTuner::AudioTuner()
 {
 }
 
-void AudioTuner::setParameter( int aChannel, int aSampleRate, int aBitsPerSample, bool aIsSpeechMode /* = false */ )
+void AudioTuner::setParameter( int aChannel, int aSampleRate, int aBitsPerSample )
 {
     mChannel = aChannel;
     mSampleRate = aSampleRate;
@@ -25,12 +26,27 @@ void AudioTuner::setParameter( int aChannel, int aSampleRate, int aBitsPerSample
 
     mSoundTouch.setSetting(SETTING_USE_QUICKSEEK, 0);  // disable quickseek
     mSoundTouch.setSetting(SETTING_USE_AA_FILTER, 1);  // enable anti alias
+}
+
+void AudioTuner::setSpeechMode( bool aIsSpeechMode )
+{
+    /* output: 0 0 8
+    DEBUG() << mSoundTouch.getSetting(SETTING_SEQUENCE_MS)
+            << mSoundTouch.getSetting(SETTING_SEEKWINDOW_MS)
+            << mSoundTouch.getSetting(SETTING_OVERLAP_MS);
+    */
 
     if ( aIsSpeechMode )
     {
-        // use settings for speech processing
+        // reference sound stretch main.cpp
         mSoundTouch.setSetting(SETTING_SEQUENCE_MS, 40);
         mSoundTouch.setSetting(SETTING_SEEKWINDOW_MS, 15);
+        mSoundTouch.setSetting(SETTING_OVERLAP_MS, 8);
+    }
+    else
+    {
+        mSoundTouch.setSetting(SETTING_SEQUENCE_MS, 0);
+        mSoundTouch.setSetting(SETTING_SEEKWINDOW_MS, 0);
         mSoundTouch.setSetting(SETTING_OVERLAP_MS, 8);
     }
 }
@@ -88,6 +104,7 @@ void AudioTuner::write( vector<uint8> & aProcessedStream, int & aTail, int aElem
             if (intTemp < -32768) intTemp = -32768;
             if (intTemp > 32767)  intTemp = 32767;
             uint8 uint8Temp = (uint8)(intTemp >> 8);
+            assert( aTail + sizeof( uint8 ) < OUTPUT_BUFFER_SIZE );
             memcpy( &aProcessedStream[aTail], &uint8Temp, sizeof( uint8 ) );
             aTail += sizeof( uint8 );
         }
@@ -100,6 +117,7 @@ void AudioTuner::write( vector<uint8> & aProcessedStream, int & aTail, int aElem
             if (intTemp < -32768) intTemp = -32768;
             if (intTemp > 32767)  intTemp = 32767;
             short shortTemp = (short)intTemp;
+            assert( aTail + sizeof( short ) < OUTPUT_BUFFER_SIZE );
             memcpy( &aProcessedStream[aTail], &shortTemp, sizeof( short ) );
             aTail += sizeof( short );
         }

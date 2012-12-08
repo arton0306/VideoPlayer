@@ -30,6 +30,7 @@ int main(int argc, char *argv[])
     //w.show();
     AudioTuner tuner;
     tuner.setParameter( 2, 44100, 16 );
+    tuner.setSpeechMode( false );
     tuner.setPitchShiftInSemiTones( +3 );
 
     vector<unsigned char> buffer(1024, 0);

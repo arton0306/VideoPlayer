@@ -10,7 +10,8 @@ class AudioTuner
 {
 public:
     AudioTuner();
-    void setParameter( int aChannel, int aSampleRate, int aBitsPerSample, bool aIsSpeechMode = false );
+    void setParameter( int aChannel, int aSampleRate, int aBitsPerSample );
+    void setSpeechMode( bool aIsSpeechMode );
     void setPitchShiftInSemiTones( int aDelta /* -60 ~ +60 */ );
     std::vector<uint8> process( std::vector<uint8> const & aInputStream );
     std::vector<unsigned char> flush();
