@@ -2,7 +2,6 @@
 #include <cstdio>
 #include <cstring>
 #include "AudioTuner.hpp"
-#include "debug.hpp"
 
 using namespace std;
 using namespace soundtouch;
@@ -11,7 +10,7 @@ AudioTuner::AudioTuner()
 {
 }
 
-void AudioTuner::init( int aChannel, int aSampleRate, int aBitsPerSample, bool aIsSpeechMode /* = false */ )
+void AudioTuner::setParameter( int aChannel, int aSampleRate, int aBitsPerSample, bool aIsSpeechMode /* = false */ )
 {
     mChannel = aChannel;
     mSampleRate = aSampleRate;
@@ -36,68 +35,43 @@ void AudioTuner::init( int aChannel, int aSampleRate, int aBitsPerSample, bool a
     }
 }
 
+// in sound touch, it will bound it automatically if aDelta out of range
 void AudioTuner::setPitchShiftInSemiTones( int aDelta /* -60 ~ +60 */ )
 {
     mSemiTonesDelta = aDelta;
     mSoundTouch.setPitchSemiTones(aDelta);
 }
 
-// the inputStream bytes must below size of mBufferForProcess
-vector<uint8> AudioTuner::processPitchShift( vector<uint8> const & inputStream )
+vector<uint8> AudioTuner::process( vector<uint8> const & aInputStream )
 {
-    // soundtouch said that it may produce more bytes than input stream
-    // so we use 90% to avoid overflow
-    assert( inputStream.size() < BUFFER_SIZE * 0.9 );
-
-    DEBUG() << "read";
-    read( inputStream );
-    int const sampleCount = inputStream.size() / ( mBitsPerSample / 8 ) / mChannel;
-    DEBUG() << "putSample in soundtouch - sampleCount:" << sampleCount;
+    read( aInputStream );
+    int const sampleCount = aInputStream.size() / ( mBitsPerSample / 8 ) / mChannel;
     mSoundTouch.putSamples( mBufferForProcess, sampleCount );
-    DEBUG() << "after putSample in soundtouch";
+    return internalProcess();
+}
 
-    vector<uint8> processedStream( inputStream.size() * 100, 0 );
+vector<uint8> AudioTuner::internalProcess()
+{
+    vector<uint8> processedStream( OUTPUT_BUFFER_SIZE, 0 );
     int processedStreamTail = 0;
 
     int sampleProcessedCount;
     do
     {
-        static float iter = -20000.0;
-        iter += 1;
-        mSoundTouch.setPitchSemiTones( iter / 42638.0f * 16 );
-        DEBUG() << "sound touch recevie samples";
-        DEBUG() << "ready samples :" << mSoundTouch.numSamples();
-        sampleProcessedCount = mSoundTouch.receiveSamples(mBufferForProcess, BUFFER_SIZE / mChannel);
-        DEBUG() << "write sample processed count: " << sampleProcessedCount;
+        sampleProcessedCount = mSoundTouch.receiveSamples(mBufferForProcess, PROCESS_BUFFER_SIZE / mChannel);
         write( processedStream, processedStreamTail, sampleProcessedCount * mChannel);
     } while (sampleProcessedCount != 0);
 
-    DEBUG() << "erase";
     processedStream.erase( processedStream.begin() + processedStreamTail, processedStream.end() );
-    DEBUG() << "after erase";
     return processedStream;
 }
 
-vector<unsigned char> AudioTuner::flushProcessBuffer()
+// some sample may left in sound touch internal buffer, we flush it and get them
+// take main.c in soundtouch for reference
+vector<uint8> AudioTuner::flush()
 {
     mSoundTouch.flush();
-    int sampleProcessedCount;
-
-    vector<uint8> processedStream( 1024 * 100, 0 );
-    int processedStreamTail = 0;
-
-    do
-    {
-        DEBUG() << "sound touch recevie samples";
-        sampleProcessedCount = mSoundTouch.receiveSamples(mBufferForProcess, BUFFER_SIZE / mChannel);
-        DEBUG() << "write sample processed count: " << sampleProcessedCount;
-        write( processedStream, processedStreamTail, sampleProcessedCount * mChannel);
-    } while (sampleProcessedCount != 0);
-
-    DEBUG() << "erase";
-    processedStream.erase( processedStream.begin() + processedStreamTail, processedStream.end() );
-    DEBUG() << "after erase";
-    return processedStream;
+    return internalProcess();
 }
 
 // mBufferForProcess ( pitch shifted stream ) => first parameter
@@ -106,13 +80,11 @@ vector<unsigned char> AudioTuner::flushProcessBuffer()
 // aElemCount: elem count in mBufferForProcess
 void AudioTuner::write( vector<uint8> & aProcessedStream, int & aTail, int aElemCount )
 {
-    DEBUG() << "output size: " << aProcessedStream.size() << " aTail: " << aTail << " aElemCount: " << aElemCount;
     if ( mBitsPerSample == 8 )
     {
         for ( int i = 0; i < aElemCount; ++i )
         {
             int intTemp = (int)(mBufferForProcess[i] * 32768.0f);
-            // saturate
             if (intTemp < -32768) intTemp = -32768;
             if (intTemp > 32767)  intTemp = 32767;
             uint8 uint8Temp = (uint8)(intTemp >> 8);
@@ -125,7 +97,6 @@ void AudioTuner::write( vector<uint8> & aProcessedStream, int & aTail, int aElem
         for ( int i = 0; i < aElemCount; ++i )
         {
             int intTemp = (int)(mBufferForProcess[i] * 32768.0f);
-            // saturate
             if (intTemp < -32768) intTemp = -32768;
             if (intTemp > 32767)  intTemp = 32767;
             short shortTemp = (short)intTemp;
@@ -140,22 +111,21 @@ void AudioTuner::write( vector<uint8> & aProcessedStream, int & aTail, int aElem
 }
 
 // original stream => mBufferForProcess
-void AudioTuner::read( vector<uint8> const & inputStream )
+void AudioTuner::read( vector<uint8> const & aInputStream )
 {
     if ( mBitsPerSample == 8 )
     {
-        for ( int i = 0; i < inputStream.size(); ++i )
+        for ( int i = 0; i < aInputStream.size(); ++i )
         {
-            mBufferForProcess[i] = ((short)inputStream[i] << 8) * 1.0 / 32768.0;
+            mBufferForProcess[i] = ((short)aInputStream[i] << 8) * 1.0 / 32768.0;
         }
     }
     else if ( mBitsPerSample == 16 )
     {
-        assert( inputStream.size() % 2 == 0 );
-        for ( int i = 0; i < inputStream.size() / 2; ++i )
+        assert( aInputStream.size() % 2 == 0 );
+        for ( int i = 0; i < aInputStream.size() / 2; ++i )
         {
-            // mBufferForProcess[i] = (((short)inputStream[2*i] << 8) + inputStream[2*i+1]) * 1.0 / 32768.0;
-            mBufferForProcess[i] = (*(short*)&inputStream[2*i]) * 1.0 / 32768.0;
+            mBufferForProcess[i] = (*(short*)&aInputStream[2*i]) * 1.0 / 32768.0;
         }
     }
     else

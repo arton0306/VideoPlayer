@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
     // MultimediaWidget w;
     //w.show();
     AudioTuner tuner;
-    tuner.init( 2, 44100, 16 );
+    tuner.setParameter( 2, 44100, 16 );
     tuner.setPitchShiftInSemiTones( +3 );
 
     vector<unsigned char> buffer(1024, 0);
@@ -42,17 +42,13 @@ int main(int argc, char *argv[])
 
         if ( readBytes != 1024 )
         {
-            DEBUG() << "read bytes != 1024";
             buffer.erase( buffer.begin() + readBytes, buffer.end() );
         }
-        vector<unsigned char> tunedBuffer = tuner.processPitchShift( buffer );
+        vector<unsigned char> tunedBuffer = tuner.process( buffer );
 
         fwrite( &tunedBuffer[0], 1, tunedBuffer.size(), outputFile );
-        DEBUG() << "write " << tunedBuffer.size() << " bytes to file";
     }
-    DEBUG() << "flush left in buffer";
-    vector<unsigned char> tunedBuffer = tuner.flushProcessBuffer();
-    DEBUG() << "finish";
+    vector<unsigned char> tunedBuffer = tuner.flush();
     fclose( inputFile );
     fclose( outputFile );
 

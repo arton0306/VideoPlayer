@@ -10,13 +10,14 @@ class AudioTuner
 {
 public:
     AudioTuner();
-    void init( int aChannel, int aSampleRate, int aBitsPerSample, bool aIsSpeechMode = false );
+    void setParameter( int aChannel, int aSampleRate, int aBitsPerSample, bool aIsSpeechMode = false );
     void setPitchShiftInSemiTones( int aDelta /* -60 ~ +60 */ );
-    std::vector<uint8> processPitchShift( std::vector<uint8> const & inputStream );
-    std::vector<unsigned char> flushProcessBuffer();
+    std::vector<uint8> process( std::vector<uint8> const & aInputStream );
+    std::vector<unsigned char> flush();
 
 private:
-    void read( std::vector<uint8> const & inputStream );
+    std::vector<uint8> internalProcess();
+    void read( std::vector<uint8> const & aInputStream );
     void write( std::vector<uint8> & aProcessedStream, int & aTail, int aElemCount );
 
     soundtouch::SoundTouch mSoundTouch;
@@ -26,9 +27,14 @@ private:
     int mChannel;
     int mSampleRate;
 
-    // SAMPLETYPE is float
-    static int const BUFFER_SIZE = 1024 * 3;
-    float mBufferForProcess[AudioTuner::BUFFER_SIZE];
+    // after souch touch processing the input samples,
+    // it output the stream at a few round which is totally less then 20k (by experiences)
+    // we use 30k to tolerate more
+    static int const OUTPUT_BUFFER_SIZE = 1024 * 30;
+
+    // SAMPLETYPE is float, the mBufferForProcess is for input
+    static int const PROCESS_BUFFER_SIZE = 1024 * 3;
+    float mBufferForProcess[AudioTuner::PROCESS_BUFFER_SIZE];
 };
 
 #endif // AUDIOTUNER_HPP
