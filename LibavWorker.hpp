@@ -12,6 +12,7 @@ extern "C"{
 }
 #include "FrameFifo.hpp"
 #include "AVInfo.hpp"
+#include "AudioTuner.hpp"
 
 class LibavWorker : public QObject
 {
@@ -31,6 +32,13 @@ public: // for other thread
     void dropNextVideoFrame();
     double getNextVideoFrameSecond() const;
     void stopDecoding();
+
+    // audio effect
+    void setSpeechMode( bool aIsSpeechMode );
+    void setPitchShiftInSemiTones( int aDelta /* -60 ~ +60 */ );
+    void setVol( double aPercent /* 0.0 ~ 1.0 */ );
+    void setLeftChanVol( double aPercent /* 0.0 ~ 1.0 */ );  // cannot be called if mono
+    void setRightChanVol( double aPercent /* 0.0 ~ 1.0 */ ); // connot be called if mono
 
 signals:
     void frameReady( uint8_t const * aPpmBuffer, int aPpmSize );
@@ -64,6 +72,15 @@ private:
     bool mIsReceiveSeekSignal;
     int mSeekMSec;             // other thread will set mIsReceiveSeekSignal and mSeekTime to notice libav thread
     bool mIsDecoding;
+
+    // audio tuner ( sound touch )
+    void setAudioEffect( int aChannel );
+
+    AudioTuner mAudioTuner;
+    bool mIsSpeechMode;
+    int mSemiTonesDelta;
+    double mLeftChanVol;  // if the audio is mono, mLeftChanVol == mRightChanVol
+    double mRightChanVol;
 };
 
 #endif // LIBAV_WORKER_HPP

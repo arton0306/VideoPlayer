@@ -5,7 +5,6 @@
 #include "MultimediaWidget.hpp"
 #include "SoundTouch.h"
 #include "STTypes.h"
-#include "AudioTuner.hpp"
 #include <cstdio>
 #include <vector>
 
@@ -25,34 +24,9 @@ int main(int argc, char *argv[])
 
     qRegisterMetaType<AVInfo>("AVInfo");
 
-    //VideoPlayer w;
+    VideoPlayer w;
     // MultimediaWidget w;
-    //w.show();
-    AudioTuner tuner;
-    tuner.init( 2, 44100, 16 );
-    tuner.setSpeechMode( false );
-    tuner.setLeftChanVol( 0.0 );
-    tuner.setPitchShiftInSemiTones( +3 );
-
-    vector<unsigned char> buffer(1024, 0);
-    FILE * inputFile = fopen( "tools/10years.pcm", "rb" );
-    FILE * outputFile = fopen( "tools/10years.3tone_inc.pcm", "ab" );
-
-    while ( !feof( inputFile ) )
-    {
-        int readBytes = fread( &buffer[0], 1, 1024, inputFile );
-
-        if ( readBytes != 1024 )
-        {
-            buffer.erase( buffer.begin() + readBytes, buffer.end() );
-        }
-        vector<unsigned char> tunedBuffer = tuner.process( buffer );
-
-        fwrite( &tunedBuffer[0], 1, tunedBuffer.size(), outputFile );
-    }
-    vector<unsigned char> tunedBuffer = tuner.flush();
-    fclose( inputFile );
-    fclose( outputFile );
+    w.show();
 
     return a.exec();
 }

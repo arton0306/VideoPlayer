@@ -11,15 +11,15 @@ class AudioTuner
 public:
     AudioTuner();
     void init( int aChannel, int aSampleRate, int aBitsPerSample );
-    void setSpeechMode( bool aIsSpeechMode );
-    void setPitchShiftInSemiTones( int aDelta /* -60 ~ +60 */ );
     std::vector<uint8> process( std::vector<uint8> const & aInputStream );
     std::vector<uint8> flush();
 
-    // the user must know the audio is sterio or not
+    // effect
+    void setSpeechMode( bool aIsSpeechMode );
+    void setPitchShiftInSemiTones( int aDelta /* -60 ~ +60 */ );
     void setVol( double aPercent /* 0.0 ~ 1.0 */ );
-    void setLeftChanVol( double aPercent /* 0.0 ~ 1.0 */ );
-    void setRightChanVol( double aPercent /* 0.0 ~ 1.0 */ );
+    void setLeftChanVol( double aPercent /* 0.0 ~ 1.0 */ );  // cannot be called if mono
+    void setRightChanVol( double aPercent /* 0.0 ~ 1.0 */ ); // connot be called if mono
 
 private:
     std::vector<uint8> internalProcess();

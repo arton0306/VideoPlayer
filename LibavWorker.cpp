@@ -16,6 +16,10 @@ LibavWorker::LibavWorker(QObject *parent)
     , mIsReceiveSeekSignal( false )
     , mSeekMSec( 0 )
     , mIsDecoding( false )
+    , mIsSpeechMode( false )
+    , mSemiTonesDelta( +3 )
+    , mLeftChanVol( 1.0 )  // if the audio is mono, mLeftChanVol == mRightChanVol
+    , mRightChanVol( 1.0 )
 {
 }
 
@@ -97,6 +101,14 @@ void LibavWorker::stopDecoding()
         mIsReceiveStopSignal = true;
     }
 }
+
+// can be called by player thread
+// audio effect
+void LibavWorker::setSpeechMode( bool aIsSpeechMode ) { mIsSpeechMode = aIsSpeechMode; }
+void LibavWorker::setPitchShiftInSemiTones( int aDelta /* -60 ~ +60 */ ) { mSemiTonesDelta = aDelta; }
+void LibavWorker::setVol( double aPercent /* 0.0 ~ 1.0 */ ) { mLeftChanVol = mRightChanVol = aPercent; }
+void LibavWorker::setLeftChanVol( double aPercent /* 0.0 ~ 1.0 */ ) { mLeftChanVol = aPercent; }
+void LibavWorker::setRightChanVol( double aPercent /* 0.0 ~ 1.0 */ ) { mRightChanVol = aPercent; }
 
 void LibavWorker::setFileName( QString aFileName )
 {
@@ -222,6 +234,12 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
     //DEBUG() << "video fps:" << fps;
     //DEBUG() << "videoStreamIndex:" << videoStreamIndex << "    audioStreamIndex:" << audioStreamIndex;
 
+    mAudioTuner.init(
+        audioCodecCtx->channels,
+        audioCodecCtx->sample_rate,
+        av_get_bytes_per_sample(audioCodecCtx->sample_fmt) * BITS_PER_BYTES
+        );
+
     readyToDecode( AVInfo(
         fps,
         formatCtx->duration,
@@ -330,10 +348,14 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
                             decodedFrame->nb_samples,
                             audioCodecCtx->sample_fmt, 1);
 
-                        // push audio data to fifo
+                        // apply audio effect and push audio data to fifo
+                        // notice that we don't push meaningful time value with the stream into the fifo
                         vector<uint8> decodedStream( data_size, 0 );
                         memcpy( &decodedStream[0], decodedFrame->data[0], data_size );
-                        mAudioFifo.push( decodedStream, av_q2d(formatCtx->streams[audioStreamIndex]->time_base) * packet.pts );
+                        setAudioEffect( audioCodecCtx->channels );
+                        vector<uint8> tunedAudioStream = mAudioTuner.process( decodedStream );
+                        if ( tunedAudioStream.size() != 0 )
+                            mAudioFifo.push( tunedAudioStream, 0.0 /* dummy value */ );
 
                         // appendPcmToFile( decodedFrame->data[0], data_size, "pcm.pcm" ); // this will spend lots time, which will cause the delay in video
                         ++audioFrameIndex;
@@ -435,4 +457,17 @@ void LibavWorker::init()
 {
     mVideoFifo.clear();
     mAudioFifo.clear();
+}
+
+void LibavWorker::setAudioEffect( int aChannel )
+{
+    mAudioTuner.setSpeechMode( mIsSpeechMode );
+    mAudioTuner.setPitchShiftInSemiTones( mSemiTonesDelta );
+    if ( aChannel == 1 )
+        mAudioTuner.setVol( mLeftChanVol ); // mLeftChanVol == mRightChanVol if mono
+    else
+    {
+        mAudioTuner.setLeftChanVol( mLeftChanVol );
+        mAudioTuner.setRightChanVol( mRightChanVol );
+    }
 }
