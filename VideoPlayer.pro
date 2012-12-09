@@ -20,7 +20,8 @@ SOURCES += \
     FrameFifo.cpp \
     AVInfo.cpp \
     Sleep.cpp \
-    MultimediaWidget.cpp
+    MultimediaWidget.cpp \
+    AudioTuner.cpp
 
 HEADERS += \
     VideoPlayer.hpp \
@@ -33,12 +34,15 @@ HEADERS += \
     FrameFifo.hpp \
     AVInfo.hpp \
     Sleep.hpp \
-    MultimediaWidget.hpp
+    MultimediaWidget.hpp \
+    AudioTuner.hpp
 
 FORMS    += VideoPlayer.ui \
     MultimediaWidget.ui
 
 INCLUDEPATH += "$$_PRO_FILE_PWD_/libav/include/"
 INCLUDEPATH += "$$_PRO_FILE_PWD_/SDL/"
+INCLUDEPATH += "$$_PRO_FILE_PWD_/SoundTouch/include"
 
 LIBS += -L"$$_PRO_FILE_PWD_/libav/lib/"  -L"$$_PRO_FILE_PWD_/SDL/lib/" -lavcodec -lavdevice -lavfilter -lavformat -lavutil -lswscale -lSDLmain -lSDL
+LIBS += -L"$$_PRO_FILE_PWD_/SoundTouch/lib/" -lSoundTouch

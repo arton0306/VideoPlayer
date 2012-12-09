@@ -3,6 +3,13 @@
 #include "VideoPlayer.hpp"
 #include "debug.hpp"
 #include "MultimediaWidget.hpp"
+#include "SoundTouch.h"
+#include "STTypes.h"
+#include <cstdio>
+#include <vector>
+
+using namespace std;
+using namespace soundtouch;
 
 int main(int argc, char *argv[])
 {
