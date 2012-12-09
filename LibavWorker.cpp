@@ -239,6 +239,7 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
         audioCodecCtx->sample_rate,
         av_get_bytes_per_sample(audioCodecCtx->sample_fmt) * BITS_PER_BYTES
         );
+    mAudioTuner.flush();
 
     readyToDecode( AVInfo(
         fps,
@@ -280,6 +281,7 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
             else
             {
                 seekState( true );
+                mAudioTuner.flush();
                 is_new_decode_request = true;
                 mVideoFifo.clear();
                 mAudioFifo.clear();
@@ -288,7 +290,11 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
         }
 
         // read a frame
-        if ( av_read_frame( formatCtx, &packet ) < 0 || stop_flag ) break;
+        if ( av_read_frame( formatCtx, &packet ) < 0 || stop_flag )
+        {
+            // there may some audio samples in soundtouch internal buffer, but we ignore them
+            break;
+        }
 
         // the index is just for debug
         ++packetIndex;
