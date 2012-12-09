@@ -10,11 +10,16 @@ class AudioTuner
 {
 public:
     AudioTuner();
-    void setParameter( int aChannel, int aSampleRate, int aBitsPerSample );
+    void init( int aChannel, int aSampleRate, int aBitsPerSample );
     void setSpeechMode( bool aIsSpeechMode );
     void setPitchShiftInSemiTones( int aDelta /* -60 ~ +60 */ );
     std::vector<uint8> process( std::vector<uint8> const & aInputStream );
-    std::vector<unsigned char> flush();
+    std::vector<uint8> flush();
+
+    // the user must know the audio is sterio or not
+    void setVol( double aPercent /* 0.0 ~ 1.0 */ );
+    void setLeftChanVol( double aPercent /* 0.0 ~ 1.0 */ );
+    void setRightChanVol( double aPercent /* 0.0 ~ 1.0 */ );
 
 private:
     std::vector<uint8> internalProcess();
@@ -22,11 +27,16 @@ private:
     void write( std::vector<uint8> & aProcessedStream, int & aTail, int aElemCount );
 
     soundtouch::SoundTouch mSoundTouch;
-    int mSemiTonesDelta;
 
+    // must be provided by users
     int mBitsPerSample;
     int mChannel;
     int mSampleRate;
+
+    // process effect
+    int mSemiTonesDelta;
+    double mLeftChanVol;  // if the audio is mono, mLeftChanVol == mRightChanVol
+    double mRightChanVol;
 
     // after souch touch processing the input samples,
     // it output the stream at a few round which is totally less then 20k (by experiences)

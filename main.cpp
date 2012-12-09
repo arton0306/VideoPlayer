@@ -29,8 +29,9 @@ int main(int argc, char *argv[])
     // MultimediaWidget w;
     //w.show();
     AudioTuner tuner;
-    tuner.setParameter( 2, 44100, 16 );
+    tuner.init( 2, 44100, 16 );
     tuner.setSpeechMode( false );
+    tuner.setLeftChanVol( 0.0 );
     tuner.setPitchShiftInSemiTones( +3 );
 
     vector<unsigned char> buffer(1024, 0);

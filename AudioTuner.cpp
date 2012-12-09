@@ -8,10 +8,12 @@ using namespace std;
 using namespace soundtouch;
 
 AudioTuner::AudioTuner()
+    : mLeftChanVol(  1.0 )
+    , mRightChanVol( 1.0 )
 {
 }
 
-void AudioTuner::setParameter( int aChannel, int aSampleRate, int aBitsPerSample )
+void AudioTuner::init( int aChannel, int aSampleRate, int aBitsPerSample )
 {
     mChannel = aChannel;
     mSampleRate = aSampleRate;
@@ -100,10 +102,14 @@ void AudioTuner::write( vector<uint8> & aProcessedStream, int & aTail, int aElem
     {
         for ( int i = 0; i < aElemCount; ++i )
         {
+            // fit to 8 bits
             int intTemp = (int)(mBufferForProcess[i] * 32768.0f);
             if (intTemp < -32768) intTemp = -32768;
             if (intTemp > 32767)  intTemp = 32767;
             uint8 uint8Temp = (uint8)(intTemp >> 8);
+            // tuned by channel vol
+            uint8Temp *= ( (i%2==0) ? mLeftChanVol : mRightChanVol );
+            // write
             assert( aTail + sizeof( uint8 ) < OUTPUT_BUFFER_SIZE );
             memcpy( &aProcessedStream[aTail], &uint8Temp, sizeof( uint8 ) );
             aTail += sizeof( uint8 );
@@ -113,10 +119,14 @@ void AudioTuner::write( vector<uint8> & aProcessedStream, int & aTail, int aElem
     {
         for ( int i = 0; i < aElemCount; ++i )
         {
+            // fit to 16 bits
             int intTemp = (int)(mBufferForProcess[i] * 32768.0f);
             if (intTemp < -32768) intTemp = -32768;
             if (intTemp > 32767)  intTemp = 32767;
             short shortTemp = (short)intTemp;
+            // tuned by channel vol
+            shortTemp *= ( (i%2==0) ? mLeftChanVol : mRightChanVol );
+            // write
             assert( aTail + sizeof( short ) < OUTPUT_BUFFER_SIZE );
             memcpy( &aProcessedStream[aTail], &shortTemp, sizeof( short ) );
             aTail += sizeof( short );
@@ -150,4 +160,28 @@ void AudioTuner::read( vector<uint8> const & aInputStream )
     {
         assert( false );
     }
+}
+
+void AudioTuner::setVol( double aPercent /* 0.0 ~ 1.0 */ )
+{
+    if ( aPercent > 1.0 ) aPercent = 1.0;
+    if ( aPercent < 0.0 ) aPercent = 0.0;
+    mLeftChanVol = aPercent;
+    mRightChanVol = aPercent;
+}
+
+void AudioTuner::setLeftChanVol( double aPercent /* 0.0 ~ 1.0 */ )
+{
+    assert( mChannel != 1 );
+    if ( aPercent > 1.0 ) aPercent = 1.0;
+    if ( aPercent < 0.0 ) aPercent = 0.0;
+    mLeftChanVol = aPercent;
+}
+
+void AudioTuner::setRightChanVol( double aPercent /* 0.0 ~ 1.0 */ )
+{
+    assert( mChannel != 1 );
+    if ( aPercent > 1.0 ) aPercent = 1.0;
+    if ( aPercent < 0.0 ) aPercent = 0.0;
+    mRightChanVol = aPercent;
 }
