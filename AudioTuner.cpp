@@ -132,6 +132,18 @@ void AudioTuner::write( vector<uint8> & aProcessedStream, int & aTail, int aElem
             aTail += sizeof( short );
         }
     }
+    else if ( mBitsPerSample == 32 )
+    {
+        for ( int i = 0; i < aElemCount; ++i )
+        {
+            // tuned by channel vol
+            mBufferForProcess[i] *= ( (i%2==0) ? mLeftChanVol : mRightChanVol );
+            // write
+            assert( aTail + sizeof( float ) < OUTPUT_BUFFER_SIZE );
+            memcpy( &aProcessedStream[aTail], &mBufferForProcess[i], sizeof( float ) );
+            aTail += sizeof( float );
+        }
+    }
     else
     {
         assert( false );
@@ -154,6 +166,14 @@ void AudioTuner::read( vector<uint8> const & aInputStream )
         for ( int i = 0; i < aInputStream.size() / 2; ++i )
         {
             mBufferForProcess[i] = (*(short*)&aInputStream[2*i]) * 1.0 / 32768.0;
+        }
+    }
+    else if ( mBitsPerSample == 32 )
+    {
+        assert( aInputStream.size() % 4 == 0 );
+        for ( int i = 0; i < aInputStream.size() / 4; ++i )
+        {
+            mBufferForProcess[i] = (*(float*)&aInputStream[4*i]);
         }
     }
     else

@@ -41,7 +41,7 @@ private:
     // after souch touch processing the input samples,
     // it output the stream at a few round which is totally less then 20k (by experiences)
     // we use 30k to tolerate more
-    static int const OUTPUT_BUFFER_SIZE = 1024 * 30;
+    static int const OUTPUT_BUFFER_SIZE = 1024 * 100;
 
     // SAMPLETYPE is float, the mBufferForProcess is for input
     static int const PROCESS_BUFFER_SIZE = 1024 * 3;
