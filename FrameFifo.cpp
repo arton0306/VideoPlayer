@@ -62,6 +62,11 @@ int FrameFifo::getCount() const
     return result;
 }
 
+bool FrameFifo::isEmpty() const
+{
+    return getCount() == 0;
+}
+
 double FrameFifo::getMaxTime() const
 {
     return mMaxTime;

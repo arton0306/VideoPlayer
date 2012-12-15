@@ -331,8 +331,8 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
                 mVideoFifo.push( ppmFrame, dtsSec );
 
                 // Dump pts and dts for debug
-                ++videoFrameIndex;
                 DEBUG() << "p ndx:" << packetIndex << "    video frame ndx:" << videoFrameIndex << "     PTS:" << packet.pts << "     DTS:" << packet.dts << " TimeBase:" << av_q2d(formatCtx->streams[videoStreamIndex]->time_base) << " *dts: " << dtsSec;
+                ++videoFrameIndex;
             }
             else
             {
@@ -368,15 +368,20 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
                         vector<uint8> decodedStream( data_size, 0 );
                         memcpy( &decodedStream[0], decodedFrame->data[0], data_size );
                         setAudioEffect( audioCodecCtx->channels );
+
+                        static double firstAudioFrameTime = 0.0;
+                        if ( mAudioFifo.isEmpty() )
+                            firstAudioFrameTime = av_q2d(formatCtx->streams[audioStreamIndex]->time_base) * packet.pts;
+
                         vector<uint8> tunedAudioStream = mAudioTuner.process( decodedStream );
                         if ( tunedAudioStream.size() != 0 )
-                            mAudioFifo.push( tunedAudioStream, 0.0 /* dummy value */ );
+                            mAudioFifo.push( tunedAudioStream, firstAudioFrameTime ); // the non-first audio time frame is useless
 
                         if ( isAvDumpNeeded )
                             appendAudioPcmToFile( decodedFrame->data[0], data_size, (mFileName + ".pcm").toStdString().c_str() ); // this will spend lots time, which will cause the delay in video
 
-                        ++audioFrameIndex;
                         DEBUG() << "p ndx:" << packetIndex << "     audio frame ndx:" << audioFrameIndex << "     PTS:" << packet.pts << "     DTS:" << packet.dts << " TimeBase:" << av_q2d(formatCtx->streams[audioStreamIndex]->time_base) << " *dts:" << av_q2d(formatCtx->streams[audioStreamIndex]->time_base) * packet.pts;
+                        ++audioFrameIndex;
                     }
                     else
                     {

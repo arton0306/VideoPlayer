@@ -30,7 +30,7 @@ MultimediaWidget::MultimediaWidget(QWidget *parent)
     QThread * libavThread = new QThread;
     mLibavWorker->moveToThread( libavThread );
     libavThread->start();
-    play( QString( "video/Lelouch.mp4" ) );
+    play( QString( "video/outof1000kilometer.mpg" ) );
 }
 
 void MultimediaWidget::setupConnection()
