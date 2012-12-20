@@ -22,6 +22,8 @@ MultimediaWidget::MultimediaWidget(QWidget *parent)
     setupUi(this);
     setupConnection();
 
+    AudioPlayer::init();
+
     mOutsideTime.start();
 
     mVideoCanvas = new QGLCanvas( this );
@@ -46,6 +48,8 @@ void MultimediaWidget::getReadyToDecodeSignal( AVInfo aAvInfo )
 {
     mCurrentAvInfo = aAvInfo;
     mCurrentAvInfo.dump();
+
+    /*
     QAudioFormat format = getAudioFormat( aAvInfo );
 
     if ( !QAudioDeviceInfo::defaultOutputDevice().isFormatSupported( format ) )
@@ -61,6 +65,13 @@ void MultimediaWidget::getReadyToDecodeSignal( AVInfo aAvInfo )
         mAudioSeekTimeMSec = 0;
         mTimer.start( getRenewPeriod( mCurrentAvInfo.getFps() ) );
     }
+    */
+
+    mAudioSeekTimeMSec = 0;
+    //mTimer.start( getRenewPeriod( aAvInfo.getFps() ) );
+    // delete mAudioPlayer; // TODO: too early to delete it ~AudioPlayer will casse crash
+    mAudioPlayer = new AudioPlayer( aAvInfo.getAudioChannel(), aAvInfo.getAudioSampleFormat(), aAvInfo.getAudioSampleRate() );
+    //mTimer.start( getRenewPeriod() );
 }
 
 void MultimediaWidget::getSeekStateSignal(bool aIsSuccess)
@@ -70,13 +81,14 @@ void MultimediaWidget::getSeekStateSignal(bool aIsSuccess)
     {
         mTimer.stop();
         mAudioStreamBuffer.clear();
-        mAudioOutput->stop();
+        //mAudioOutput->stop();
     }
 }
 
 void MultimediaWidget::getInitAVFrameReadySignal(double aFirstAudioFrameMsec)
 {
     // we don't need to delete mOutputDevice by try&error, TODO survey Qt source code
+    /*
     mOutputDevice = mAudioOutput->start();
     mOutsideTime.restart();
     mAdjustMs = 0;
@@ -84,6 +96,15 @@ void MultimediaWidget::getInitAVFrameReadySignal(double aFirstAudioFrameMsec)
     mAudioSeekTimeMSec = aFirstAudioFrameMsec;
     DEBUG() << "libav seek from: " << aFirstAudioFrameMsec;
     mTimer.start( getRenewPeriod( mCurrentAvInfo.getFps() ) );
+    */
+    mOutsideTime.restart();
+    mAdjustMs = 0;
+    debugTimer = 0;
+    mAudioSeekTimeMSec = aFirstAudioFrameMsec;
+    DEBUG() << "libav seek from (ms): " << aFirstAudioFrameMsec;
+    fetchAllAvailableAudioAndPush();
+    mAudioPlayer->play();
+    mTimer.start( getRenewPeriod() );
 }
 
 // the period is a function of fps
@@ -93,9 +114,15 @@ double MultimediaWidget::getRenewPeriod( double a_fps ) const
     return 5;
 }
 
+double MultimediaWidget::getRenewPeriod() const
+{
+    return 1;
+}
+
 double const MultimediaWidget::sAudioAdjustGapMs = 150.0;
 double MultimediaWidget::getAudioPlayedSecond() const
 {
+    /*
     assert( mAudioOutput->state() == QAudio::ActiveState || mAudioOutput->state() == QAudio::IdleState );
     // the played-time got by Qt lib has about 40ms error
     // so we use a outside clock to sync audio&video, but we adjust the outside clock to match the played-time(by Qt) if the gap become too large ( >sAudioAdjustGapMs )
@@ -115,6 +142,24 @@ double MultimediaWidget::getAudioPlayedSecond() const
 
     // msQtPlay maybe negative (by Qt implement)
     return ( mAudioSeekTimeMSec + mOutsideTime.elapsed() + mAdjustMs ) / 1000.0;
+    */
+    double const msPortaudioTime = mAudioSeekTimeMSec + mAudioPlayer->getPlaySec() * 1000;
+    double const msSyncTime = mAudioSeekTimeMSec + mOutsideTime.elapsed() + mAdjustMs;
+
+    if ( std::abs( msPortaudioTime - msSyncTime ) > MultimediaWidget::sAudioAdjustGapMs )
+    {
+        mAdjustMs += msPortaudioTime - msSyncTime;
+        DEBUG() << "qt_time: " << msPortaudioTime << "  sync_time: " << msSyncTime;
+    }
+
+    return ( mAudioSeekTimeMSec + mOutsideTime.elapsed() + mAdjustMs ) / 1000.0;
+}
+
+void MultimediaWidget::fetchAllAvailableAudioAndPush()
+{
+    vector<uint8> audioStreamFetched = mLibavWorker->popAllAudioStream();
+    int const writeBytes = mAudioPlayer->pushStream( reinterpret_cast<const char *>( &audioStreamFetched[0] ), audioStreamFetched.size() );
+    mAudioStreamBuffer.insert( mAudioStreamBuffer.end(), audioStreamFetched.begin() + writeBytes, audioStreamFetched.end() );
 }
 
 void MultimediaWidget::updateAV()
@@ -124,19 +169,16 @@ void MultimediaWidget::updateAV()
     {
         debugTimer++;
         DEBUG() << "**************** first updateAV ************************************************************************";
-        DEBUG() << "audio processed usecs:" << mAudioOutput->processedUSecs() << " outside time elapsed:" << mOutsideTime.elapsed();
+        // DEBUG() << "audio processed usecs:" << mAudioOutput->processedUSecs() << " outside time elapsed:" << mOutsideTime.elapsed();
     }
 
-    // fetch all the decoded audio data and push into audio device if the buffer is empty
     if ( mAudioStreamBuffer.empty() )
     {
-        vector<uint8> audioStreamFetched = mLibavWorker->popAllAudioStream();
-        qint64 const writeBytes = mOutputDevice->write( reinterpret_cast<const char *>( &audioStreamFetched[0] ), audioStreamFetched.size() );
-        mAudioStreamBuffer.insert( mAudioStreamBuffer.end(), audioStreamFetched.begin() + writeBytes, audioStreamFetched.end() );
+        fetchAllAvailableAudioAndPush();
     }
     else
     {
-        qint64 const writeBytes = mOutputDevice->write( reinterpret_cast<const char *>( &mAudioStreamBuffer[0] ), mAudioStreamBuffer.size() );
+        int const writeBytes = mAudioPlayer->pushStream( reinterpret_cast<const char *>( &mAudioStreamBuffer[0] ), mAudioStreamBuffer.size() );
         mAudioStreamBuffer.erase( mAudioStreamBuffer.begin(), mAudioStreamBuffer.begin() + writeBytes );
     }
 
@@ -190,7 +232,8 @@ QAudioFormat MultimediaWidget::getAudioFormat( AVInfo const & aAvInfo ) const
 
 MultimediaWidget::~MultimediaWidget()
 {
-    delete mAudioOutput;
+    AudioPlayer::finish();
+    // delete mAudioOutput;
 }
 
 void MultimediaWidget::play( QString aFileName )

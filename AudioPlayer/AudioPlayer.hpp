@@ -25,11 +25,12 @@ public:
     ~AudioPlayer();
     int pushStream
         (
-        char * aInputStream,  /* input audio stream */
+        char const * aInputStream,  /* input audio stream */
         int aInputSize /* input audio stream size */
         );
     void play();
     void stop();
+    double getPlaySec() const;
 
 private:
     static bool sIsInit;
@@ -38,6 +39,7 @@ private:
     int getNextIndex( int pos ) const;
     int getUsedSize() const;
     int getAvailableSize() const;
+    void fillDefaultSample();
     static int callback
         (
         const void *inputBuffer,
@@ -53,14 +55,17 @@ private:
     PaSampleFormat mSampleFormat;
     double mSampleRate;
 
+    // TODO: check volitile is needed or not
     // audio buffer data
     char * mStreamBuffer;
     int mBufferSize;
     int mStart; // the callback will read from this index
-    int mEnd;   // the index where the users push from, the index is always empty
+    int mEnd;   // the index where the users push from, the element on this index is always empty
+    double mConsumedBytes; // we use this to estimate the playing time
 
     // port audio data
     PaStream * mPaStream;
+    double mPlaySec;
 };
 
 #endif

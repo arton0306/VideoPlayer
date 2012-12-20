@@ -52,6 +52,7 @@ SOURCES += \
     AudioPlayer/AudioPlayer.cpp
 HEADERS += \
     AudioPlayer/AudioPlayer.hpp
+INCLUDEPATH += "$$_PRO_FILE_PWD_/AudioPlayer/"
 INCLUDEPATH += "$$_PRO_FILE_PWD_/AudioPlayer/portaudio/include/"
 LIBS += -L"$$_PRO_FILE_PWD_/AudioPlayer/portaudio/lib/" -llibportaudio
 

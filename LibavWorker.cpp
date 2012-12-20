@@ -241,6 +241,25 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
     //DEBUG() << "video fps:" << fps;
     //DEBUG() << "videoStreamIndex:" << videoStreamIndex << "    audioStreamIndex:" << audioStreamIndex;
 
+    /* libav audio sample format ( ref: libav\libavutil\samplefmt.h )
+    enum AVSampleFormat {
+        AV_SAMPLE_FMT_NONE = -1,
+        AV_SAMPLE_FMT_U8,          ///< unsigned 8 bits
+        AV_SAMPLE_FMT_S16,         ///< signed 16 bits
+        AV_SAMPLE_FMT_S32,         ///< signed 32 bits
+        AV_SAMPLE_FMT_FLT,         ///< float
+        AV_SAMPLE_FMT_DBL,         ///< double
+
+        AV_SAMPLE_FMT_U8P,         ///< unsigned 8 bits, planar
+        AV_SAMPLE_FMT_S16P,        ///< signed 16 bits, planar
+        AV_SAMPLE_FMT_S32P,        ///< signed 32 bits, planar
+        AV_SAMPLE_FMT_FLTP,        ///< float, planar
+        AV_SAMPLE_FMT_DBLP,        ///< double, planar
+
+        AV_SAMPLE_FMT_NB           ///< Number of sample formats. DO NOT USE if linking dynamically
+    };
+    */
+
     mAudioTuner.init(
         audioCodecCtx->channels,
         audioCodecCtx->sample_rate,
@@ -248,12 +267,18 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
         );
     mAudioTuner.flush();
 
-    AVInfo avInfo( fps, formatCtx->duration, audioCodecCtx->channels, audioCodecCtx->sample_rate,
-                   av_get_bytes_per_sample(audioCodecCtx->sample_fmt) * BITS_PER_BYTES );
+    AVInfo avInfo(
+        fps,
+        formatCtx->duration,
+        audioCodecCtx->channels,
+        audioCodecCtx->sample_fmt,
+        audioCodecCtx->sample_rate,
+        av_get_bytes_per_sample( audioCodecCtx->sample_fmt ) * BITS_PER_BYTES
+        );
     if ( isAvDumpNeeded ) saveAVInfoToFile( avInfo, (mFileName + ".avinfo.txt").toStdString().c_str());
     readyToDecode( avInfo );
 
-    bool is_new_decode_request = true; // true if ther users want to decode from new position.
+    bool is_new_decode_request = true; // true if the users want to decode from new position ( seek or new play )
 
     while ( true )
     {
@@ -376,6 +401,7 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
                         vector<uint8> tunedAudioStream = mAudioTuner.process( decodedStream );
                         if ( tunedAudioStream.size() != 0 )
                             mAudioFifo.push( tunedAudioStream, firstAudioFrameTime ); // the non-first audio time frame is useless
+                        //mAudioFifo.push( decodedStream, firstAudioFrameTime ); // the non-first audio time frame is useless
 
                         if ( isAvDumpNeeded )
                             appendAudioPcmToFile( decodedFrame->data[0], data_size, (mFileName + ".pcm").toStdString().c_str() ); // this will spend lots time, which will cause the delay in video
