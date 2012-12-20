@@ -38,7 +38,7 @@ HEADERS += \
     AudioTuner.hpp
 
 FORMS    += VideoPlayer.ui \
-    MultimediaWidget.ui
+            MultimediaWidget.ui
 
 INCLUDEPATH += "$$_PRO_FILE_PWD_/libav/include/"
 INCLUDEPATH += "$$_PRO_FILE_PWD_/SDL/"
@@ -46,3 +46,12 @@ INCLUDEPATH += "$$_PRO_FILE_PWD_/SoundTouch/include"
 
 LIBS += -L"$$_PRO_FILE_PWD_/libav/lib/"  -L"$$_PRO_FILE_PWD_/SDL/lib/" -lavcodec -lavdevice -lavfilter -lavformat -lavutil -lswscale -lSDLmain -lSDL
 LIBS += -L"$$_PRO_FILE_PWD_/SoundTouch/lib/" -lSoundTouch
+
+# AudioPlayer
+SOURCES += \
+    AudioPlayer/AudioPlayer.cpp
+HEADERS += \
+    AudioPlayer/AudioPlayer.hpp
+INCLUDEPATH += "$$_PRO_FILE_PWD_/AudioPlayer/portaudio/include/"
+LIBS += -L"$$_PRO_FILE_PWD_/AudioPlayer/portaudio/lib/" -llibportaudio
+
