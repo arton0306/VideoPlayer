@@ -237,7 +237,7 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
     int videoFrameIndex = 0;
     int audioFrameIndex = 0;
     int packetIndex = 0;
-    double const fps = av_q2d( formatCtx->streams[videoFrameIndex]->avg_frame_rate );
+    double const fps = av_q2d( formatCtx->streams[videoStreamIndex]->avg_frame_rate );
     //DEBUG() << "video fps:" << fps;
     //DEBUG() << "videoStreamIndex:" << videoStreamIndex << "    audioStreamIndex:" << audioStreamIndex;
 
