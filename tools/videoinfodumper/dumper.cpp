@@ -1,4 +1,5 @@
 #include <cassert>
+#include <iostream>
 #include "../../UINT64_C_incpp.hpp"
 extern "C"{
     #include "libavcodec/avcodec.h"
@@ -14,7 +15,7 @@ void dumper_by_hand( char const * filename );
 int main()
 {
     //libav_dumper( "outof1000kilometer.mpg" );
-    libav_dumper( "Lelouch.mp4" );
+    libav_dumper( "dazzy.mpg" );
 
     return 0;
 }
@@ -30,14 +31,22 @@ extern "C"
 
         // Open video file
         if ( avformat_open_input( &pFormatCtx, filename, NULL, NULL ) != 0 )
-            assert( false );
+        {
+            std::cerr << "!!!!!!!!!! The file can not opened by libav !!!!!!!!!" << std::endl;
+            return;
+        }
 
         // Retrieve stream information
-        if ( avformat_find_stream_info( pFormatCtx, NULL ) < 0 )
-            assert( false );
-
-        // Dump information about file onto standard error
-        av_dump_format( pFormatCtx, 0, filename, 0 );
+        if ( avformat_find_stream_info( pFormatCtx, NULL ) >= 0 )
+        {
+            // Dump information about file onto standard error
+            av_dump_format( pFormatCtx, 0, filename, 0 );
+            std::cerr.flush();
+        }
+        else
+        {
+            std::cerr << "!!!!!!!!!! The file stream is broken !!!!!!!!!" << std::endl;
+        }
 
         avformat_close_input( &pFormatCtx );
     }
