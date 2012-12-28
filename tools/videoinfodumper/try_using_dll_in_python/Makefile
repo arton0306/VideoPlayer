@@ -8,3 +8,6 @@ all:
 	g++ -c -fPIC wrap_foo.cpp -o wrap_foo.o
 	g++ -shared -o libwrap_foo.dll wrap_foo.o -Wl -L. -llibfoo
 	g++ -o using_wrap_foo.exe using_wrap_foo.cpp -L. -llibwrap_foo
+
+clean:
+	rm *.exe *.o *.dll
