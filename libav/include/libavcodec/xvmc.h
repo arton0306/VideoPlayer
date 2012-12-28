@@ -1,29 +1,42 @@
 /*
  * Copyright (C) 2003 Ivan Kalvachev
  *
- * This file is part of Libav.
+ * This file is part of FFmpeg.
  *
- * Libav is free software; you can redistribute it and/or
+ * FFmpeg is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
  *
- * Libav is distributed in the hope that it will be useful,
+ * FFmpeg is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with Libav; if not, write to the Free Software
+ * License along with FFmpeg; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
 #ifndef AVCODEC_XVMC_H
 #define AVCODEC_XVMC_H
 
+/**
+ * @file
+ * @ingroup lavc_codec_hwaccel_xvmc
+ * Public libavcodec XvMC header.
+ */
+
 #include <X11/extensions/XvMC.h>
 
 #include "avcodec.h"
+
+/**
+ * @defgroup lavc_codec_hwaccel_xvmc XvMC
+ * @ingroup lavc_codec_hwaccel
+ *
+ * @{
+ */
 
 #define AV_XVMC_ID                    0x1DC711C0  /**< special value to ensure that regular pixel routines haven't corrupted the struct
                                                        the number is 1337 speak for the letters IDCT MCo (motion compensation) */
@@ -134,7 +147,7 @@ struct xvmc_pix_fmt {
     */
     int             filled_mv_blocks_num;
 
-    /** Number of the the next free data block; one data block consists of
+    /** Number of the next free data block; one data block consists of
         64 short values in the data_blocks array.
         All blocks before this one have already been claimed by placing their
         position into the corresponding block description structure field,
@@ -147,5 +160,9 @@ struct xvmc_pix_fmt {
     */
     int             next_free_data_block_num;
 };
+
+/**
+ * @}
+ */
 
 #endif /* AVCODEC_XVMC_H */
