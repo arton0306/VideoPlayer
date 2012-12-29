@@ -31,7 +31,6 @@ if __name__ == '__main__':
     sys.stdout = sys.stderr
 
     path = "G:\KTV\整理好的歌"
-    """
     for filename in os.listdir( path ):
         fullname = path + os.sep + filename
         print "#" * 70, fullname
@@ -39,7 +38,6 @@ if __name__ == '__main__':
             #print( "=" * 70 )
             lib.libav_dumper( fullname )
             print ""
-    """
     #lib.libav_dumper( "G:\KTV\整理好的歌\國-女-一青窈-望春風.mpg" )
     #lib.libav_dumper( "G:\KTV\整理好的歌\國-女-丁噹-代替.mpg" )
-    lib.libav_dumper( "G:\KTV\整理好的歌\台-男-陳雷-最佳男主角.mpg" )
+    #lib.libav_dumper( "G:\KTV\整理好的歌\台-男-陳雷-最佳男主角.mpg" )
