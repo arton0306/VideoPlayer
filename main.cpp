@@ -3,7 +3,6 @@
 #include "VideoPlayer.hpp"
 #include "debug.hpp"
 #include "MultimediaWidget.hpp"
-#include "SoundTouch.h"
 #include "STTypes.h"
 #include <cstdio>
 #include <vector>
