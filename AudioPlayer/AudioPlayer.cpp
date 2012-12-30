@@ -192,12 +192,19 @@ int AudioPlayer::pushStream(
     int consume = 0;
 
     // we must save it as local because the callback will change the mStart in interrupt
-    int beforeStart = getPreviousIndex( mStart );
+    // int beforeStart = getPreviousIndex( mStart ); // fail
+    //int beforeStart = 0; // ok
+    //int beforeStart = mBufferSize - 1; // fail
+    int beforeStart = 15000000;
     for( ;
          mEnd != beforeStart && consume < aInputSize;
          mEnd = getNextIndex( mEnd ), consume += 1 )
     {
-        memcpy( &mStreamBuffer[mEnd], &aInputStream[consume], 1 );
+        // memcpy( &mStreamBuffer[mEnd], &aInputStream[consume], 1 );
+        if ( mEnd % 1000 == 0 )
+        {
+            printf( "beforeStart=%d mEnd=%d consume=%d\n", beforeStart, mEnd, consume );
+        }
     }
 
     return consume;
