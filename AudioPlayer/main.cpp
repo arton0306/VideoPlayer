@@ -1,3 +1,4 @@
+#include <iostream>
 #include <cstdlib>
 #include <cstdio>
 #include <cassert>
@@ -21,10 +22,27 @@ int main()
     assert( feof( inputFile ) );
 
     // port audio
+    /*
     AudioPlayer::init();
     AudioPlayer audioPlayer( 2, AudioPlayer::Float32, 48000 );
     audioPlayer.pushStream( data, readBytes );
     audioPlayer.play();
+
+    Pa_Sleep(30*1000);
+    */
+
+
+    AudioPlayer::init();
+    AudioPlayer audioPlayer( 2, AudioPlayer::Float32, 48000 );
+    Pa_Sleep(3000);
+    int pushbytes = 0;
+    for ( int i = 0; i < 100; i++ )
+    {
+        pushbytes += audioPlayer.pushStream( data + pushbytes, readBytes / 100);
+        if ( i == 10 ) audioPlayer.play();
+        Pa_Sleep(50);
+        cout << "getPlaySec " << audioPlayer.getPlaySec() << endl;
+    }
 
     Pa_Sleep(30*1000);
 
