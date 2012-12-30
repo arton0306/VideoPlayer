@@ -23,12 +23,14 @@ public:
     double getMaxTime() const;  // not used for the time being
     double getFrontFrameSecond() const;
     void clear();
+    int getBytes() const;
 
 private:
     std::queue<std::vector<uint8> > mFifo;
     std::queue<double> mTime; // in sec
     double mMaxTime; // in sec
     mutable QMutex mMutex;
+    int mBytes;
 };
 
 #endif // FRAME_FIFO_HPP

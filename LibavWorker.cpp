@@ -398,10 +398,12 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
                         if ( mAudioFifo.isEmpty() )
                             firstAudioFrameTime = av_q2d(formatCtx->streams[audioStreamIndex]->time_base) * packet.pts;
 
+                        /*
                         vector<uint8> tunedAudioStream = mAudioTuner.process( decodedStream );
                         if ( tunedAudioStream.size() != 0 )
                             mAudioFifo.push( tunedAudioStream, firstAudioFrameTime ); // the non-first audio time frame is useless
-                        //mAudioFifo.push( decodedStream, firstAudioFrameTime ); // the non-first audio time frame is useless
+                        */
+                        mAudioFifo.push( decodedStream, firstAudioFrameTime ); // the non-first audio time frame is useless
 
                         if ( isAvDumpNeeded )
                             appendAudioPcmToFile( decodedFrame->data[0], data_size, (mFileName + ".pcm").toStdString().c_str() ); // this will spend lots time, which will cause the delay in video
@@ -516,10 +518,15 @@ void LibavWorker::saveAVInfoToFile( AVInfo const & aAVInfo, char const * aFileNa
     fp.close();
 }
 
-// for the time being, the fps is not related to the determenator
 bool LibavWorker::isAvFrameEnough( double a_fps ) const
 {
-    return ( min( mVideoFifo.getCount(), mAudioFifo.getCount() ) > 1 );
+    if ( ( mVideoFifo.getCount() > 1 ) &&
+         ( mAudioFifo.getBytes() > 1024 * 1024 ) )
+    {
+        return true;
+    }
+    return false;
+    // return ( min( mVideoFifo.getCount(), mAudioFifo.getCount() ) > 1 );
 }
 
 void LibavWorker::init()
