@@ -116,14 +116,17 @@ AudioPlayer::~AudioPlayer()
 void AudioPlayer::play()
 {
     PaError err = Pa_StartStream( mPaStream );
-    // printf( "start at: get stream time - %lf \n", Pa_GetStreamTime( mPaStream ) );
+    // printf( "in play err=%d\n", err);
     assert( err == paNoError );
 }
 
 void AudioPlayer::stop()
 {
     PaError err = Pa_StopStream( mPaStream );
+    // printf( "in stop err=%d\n", err);
     assert( err == paNoError );
+    mStart = 0;
+    mEnd = 0;
     mConsumedBytes = 0;
 }
 

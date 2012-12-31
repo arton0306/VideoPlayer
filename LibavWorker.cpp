@@ -398,12 +398,10 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
                         if ( mAudioFifo.isEmpty() )
                             firstAudioFrameTime = av_q2d(formatCtx->streams[audioStreamIndex]->time_base) * packet.pts;
 
-                        /*
                         vector<uint8> tunedAudioStream = mAudioTuner.process( decodedStream );
                         if ( tunedAudioStream.size() != 0 )
                             mAudioFifo.push( tunedAudioStream, firstAudioFrameTime ); // the non-first audio time frame is useless
-                        */
-                        mAudioFifo.push( decodedStream, firstAudioFrameTime ); // the non-first audio time frame is useless
+                        //mAudioFifo.push( decodedStream, firstAudioFrameTime ); // the non-first audio time frame is useless
 
                         if ( isAvDumpNeeded )
                             appendAudioPcmToFile( decodedFrame->data[0], data_size, (mFileName + ".pcm").toStdString().c_str() ); // this will spend lots time, which will cause the delay in video
@@ -520,13 +518,16 @@ void LibavWorker::saveAVInfoToFile( AVInfo const & aAVInfo, char const * aFileNa
 
 bool LibavWorker::isAvFrameEnough( double a_fps ) const
 {
+    // video: at least 2 frames
+    // audio: 64KB data, in 48000Hz, 2ch, int13, can play 0.34 second
+    // this condition will consume lots mem because we'll read many video frame in order to get audio frames
+    // this change due to soundtouch output stream at one go, and portaudio's callback need data ASAP
     if ( ( mVideoFifo.getCount() > 1 ) &&
-         ( mAudioFifo.getBytes() > 1024 * 1024 ) )
+         ( mAudioFifo.getBytes() > 64 * 1024 ) )
     {
         return true;
     }
     return false;
-    // return ( min( mVideoFifo.getCount(), mAudioFifo.getCount() ) > 1 );
 }
 
 void LibavWorker::init()
