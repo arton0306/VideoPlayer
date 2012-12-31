@@ -15,7 +15,7 @@ AudioPlayer::AudioPlayer( int aChannel, SampleFormat aSampleFormat, double aSamp
     mSampleFormat = getPaSampleFormat( aSampleFormat );
     mSampleRate = aSampleRate;
 
-    mBufferSize = 20 * 1024 * 1024;
+    mBufferSize = 1 * 1024 * 1024;
     mStreamBuffer = (char*)malloc( mBufferSize );
     fillDefaultSample();
     mStart = 0;
@@ -41,14 +41,21 @@ void AudioPlayer::fillDefaultSample()
 {
     double ratio = 0;
     int sampleSize = 0;
+
     switch ( mSampleFormat )
     {
-        case Float32: ratio = 1.0;        sampleSize = 4;  break;
-        case Int32  : ratio = 0x7fffffff; sampleSize = 4;  break;
-        case Int16  : ratio = 0x7fff;     sampleSize = 2;  break;
-        case Int8   : ratio = 0x7f;       sampleSize = 1;  break;
-        default :     ratio = 0x7fff;     sampleSize = 2;  break; // int16 is popular sample format;
+        case paFloat32: ratio = 1.0;        sampleSize = 4;  break;
+        case paInt32  : ratio = 0x7fffffff; sampleSize = 4;  break;
+        case paInt16  : ratio = 0x7fff;     sampleSize = 2;  break;
+        case paInt8   : ratio = 0x7f;       sampleSize = 1;  break;
+        default :       ratio = 0x7fff;     sampleSize = 2;  break; // int16 is popular sample format;
     }
+
+    /*
+    printf( "ratio = %lf\n", ratio );
+    printf( "sizeof(short) = %u\n", sizeof(short) );
+    printf( "mSampleFormat = %d\n", mSampleFormat );
+    */
 
     double sampleValue = 0.0;
     for ( int i = 0; i < mBufferSize / mChannel / sampleSize; ++i )
@@ -60,10 +67,10 @@ void AudioPlayer::fillDefaultSample()
             int destPos = i * mChannel * sampleSize + j * sampleSize;
             switch ( mSampleFormat )
             {
-                case Float32: { float temp = (float)fitRatio; memcpy( &mStreamBuffer[destPos], &temp, 4 ); } break;
-                case Int32  : { int   temp =   (int)fitRatio; memcpy( &mStreamBuffer[destPos], &temp, 4 ); } break;
-                case Int16  : { short temp = (short)fitRatio; memcpy( &mStreamBuffer[destPos], &temp, 2 ); } break;
-                case Int8   : { char  temp =  (char)fitRatio; memcpy( &mStreamBuffer[destPos], &temp, 1 ); } break;
+                case paFloat32: { float temp = (float)fitRatio; memcpy( &mStreamBuffer[destPos], &temp, 4 ); } break;
+                case paInt32  : { int   temp =   (int)fitRatio; memcpy( &mStreamBuffer[destPos], &temp, 4 ); } break;
+                case paInt16  : { short temp = (short)fitRatio; memcpy( &mStreamBuffer[destPos], &temp, 2 ); } break;
+                case paInt8   : { char  temp =  (char)fitRatio; memcpy( &mStreamBuffer[destPos], &temp, 1 ); } break;
                 default :   break; // we don't know how to init it with default sample
             }
         }
@@ -109,14 +116,17 @@ AudioPlayer::~AudioPlayer()
 void AudioPlayer::play()
 {
     PaError err = Pa_StartStream( mPaStream );
-    // printf( "start at: get stream time - %lf \n", Pa_GetStreamTime( mPaStream ) );
+    // printf( "in play err=%d\n", err);
     assert( err == paNoError );
 }
 
 void AudioPlayer::stop()
 {
     PaError err = Pa_StopStream( mPaStream );
+    // printf( "in stop err=%d\n", err);
     assert( err == paNoError );
+    mStart = 0;
+    mEnd = 0;
     mConsumedBytes = 0;
 }
 
@@ -186,11 +196,21 @@ int AudioPlayer::pushStream(
 
     // we must save it as local because the callback will change the mStart in interrupt
     int beforeStart = getPreviousIndex( mStart );
-    for( ;
-         mEnd != beforeStart && consume < aInputSize;
-         mEnd = getNextIndex( mEnd ), consume += 1 )
+    //int beforeStart = 0; // ok
+    //int beforeStart = mBufferSize - 1; // fail
+    //int beforeStart = 15000000; // fail
+    //int beforeStart = 10000000; // ok
+    for(;
+        mEnd != beforeStart && consume < aInputSize;
+        mEnd = getNextIndex( mEnd ), consume += 1 )
     {
         memcpy( &mStreamBuffer[mEnd], &aInputStream[consume], 1 );
+        /*
+        if ( mEnd % 1000 == 0 )
+        {
+            printf( "beforeStart=%d mEnd=%d consume=%d\n", beforeStart, mEnd, consume );
+        }
+        */
     }
 
     return consume;

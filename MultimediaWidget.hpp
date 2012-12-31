@@ -41,8 +41,9 @@ public slots:
 private:
     void setupConnection();
     QAudioFormat getAudioFormat( AVInfo const & aAvInfo ) const;
+    void fetchAllAvailableAudioAndPush();
     double getAudioPlayedSecond() const;
-    double getRenewPeriod( double a_fps ) const;
+    double getRenewPeriod() const;
 
     // the decoded thread
     LibavWorker * mLibavWorker;
@@ -51,8 +52,7 @@ private:
     QGLCanvas * mVideoCanvas;
 
     // the objects to play audio
-    QAudioOutput * mAudioOutput;
-    QIODevice * mOutputDevice;
+    AudioPlayer * mAudioPlayer;
     std::vector<uint8> mAudioStreamBuffer;
 
     // the infomation of the current playing multimedia

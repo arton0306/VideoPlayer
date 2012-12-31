@@ -4,8 +4,9 @@
 using namespace std;
 
 FrameFifo::FrameFifo()
-    : mMaxTime( 0.0 )
 {
+    mMaxTime = 0.0;
+    mBytes = 0;
 }
 
 void FrameFifo::push( vector<uint8> a_frame, double a_time )
@@ -16,6 +17,7 @@ void FrameFifo::push( vector<uint8> a_frame, double a_time )
         mTime.push( a_time );
         assert( a_time >= mMaxTime );
         mMaxTime = a_time;
+        mBytes += a_frame.size();
     }
     mMutex.unlock();
 }
@@ -30,6 +32,7 @@ vector<uint8> FrameFifo::pop()
             retFrame = mFifo.front();
             mFifo.pop();
             mTime.pop();
+            mBytes -= retFrame.size();
         }
     }
     mMutex.unlock();
@@ -83,6 +86,13 @@ void FrameFifo::clear()
             mTime.pop();
         }
         mMaxTime = 0.0;
+        mBytes = 0;
     }
     mMutex.unlock();
 }
+
+int FrameFifo::getBytes() const
+{
+    return mBytes;
+}
+
