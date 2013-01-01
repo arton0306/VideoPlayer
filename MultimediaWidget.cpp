@@ -78,10 +78,10 @@ void MultimediaWidget::getInitAVFrameReadySignal(double aFirstAudioFrameMsec)
 
 double MultimediaWidget::getRenewPeriod() const
 {
-    return 1;
+    return 2.5;
 }
 
-double const MultimediaWidget::sAudioAdjustGapMs = 150.0;
+double const MultimediaWidget::sAudioAdjustGapMs = 30.0;
 double MultimediaWidget::getAudioPlayedSecond() const
 {
     // TODO
@@ -89,6 +89,11 @@ double MultimediaWidget::getAudioPlayedSecond() const
     // the played-time got by Qt lib has about 40ms error
     // so we use a outside clock to sync audio&video, but we adjust the outside clock to match the played-time(by Qt) if the gap become too large ( >sAudioAdjustGapMs )
     // now, we use portaudio, we check the outside clock is needed or not in the future
+
+    /*
+    DEBUG() << "get playing time: " << mAudioSeekTimeMSec / 1000.0 + mAudioPlayer->getPlaySec();
+    return mAudioSeekTimeMSec / 1000.0 + mAudioPlayer->getPlaySec();
+    */
 
     double const msPortaudioTime = mAudioSeekTimeMSec + mAudioPlayer->getPlaySec() * 1000;
     double const msSyncTime = mAudioSeekTimeMSec + mOutsideTime.elapsed() + mAdjustMs;

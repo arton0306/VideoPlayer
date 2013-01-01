@@ -40,6 +40,8 @@ private:
     int getUsedSize() const;
     int getAvailableSize() const;
     void fillDefaultSample();
+    void dumpCallbackContext() const;
+    void recordStatusFlags( PaStreamCallbackFlags flags );
     static int callback
         (
         const void *inputBuffer,
@@ -66,6 +68,14 @@ private:
     // port audio data
     PaStream * mPaStream;
     double mPlaySec;
+
+    struct CallbackContext
+    {
+        int mCount;
+        int mOutputUnderflowCount;
+        int mOutputOverflowCount;
+        int mPrimingCount;
+    } mCallbackContext;
 };
 
 #endif

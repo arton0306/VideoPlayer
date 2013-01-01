@@ -34,6 +34,7 @@ AudioPlayer::AudioPlayer( int aChannel, SampleFormat aSampleFormat, double aSamp
     assert( err == paNoError );
 
     mPlaySec = 0.0;
+    memset( &mCallbackContext, 0, sizeof( struct CallbackContext ) );
 }
 
 // so we can debug conviniently
@@ -154,7 +155,6 @@ double AudioPlayer::getPlaySec() const
     char *out = (char*)outputBuffer;
     (void) inputBuffer; /* Prevent unused variable warning. */
     (void) timeInfo;    /* Prevent unused variable warning. */
-    (void) statusFlags; // TODO: use it!
 
     for( int i = 0; i < framesPerBuffer; ++i )
     {
@@ -168,7 +168,23 @@ double AudioPlayer::getPlaySec() const
             }
         }
     }
+
+    //context->recordStatusFlags( statusFlags );
+    //context->dumpCallbackContext();
+
+    //printf( "1st sample to output: %10.5lf , cur playing time:%10.5lf, diff: %10.5lf\n", timeInfo->outputBufferDacTime , context->getPlaySec(), timeInfo->outputBufferDacTime - context->getPlaySec() );
+
     return 0;
+}
+
+void AudioPlayer::recordStatusFlags( PaStreamCallbackFlags flags )
+{
+    mCallbackContext.mCount += 1;
+    if( flags & paOutputUnderflow ) mCallbackContext.mOutputUnderflowCount += 1;
+    if( flags & paOutputOverflow )  mCallbackContext.mOutputOverflowCount += 1;
+    if( flags & paPrimingOutput )   mCallbackContext.mPrimingCount += 1;
+
+    //if( flags & paOutputUnderflow ) dumpCallbackContext();
 }
 
 PaSampleFormat AudioPlayer::getPaSampleFormat( SampleFormat aSampleFormat ) const
@@ -196,21 +212,11 @@ int AudioPlayer::pushStream(
 
     // we must save it as local because the callback will change the mStart in interrupt
     int beforeStart = getPreviousIndex( mStart );
-    //int beforeStart = 0; // ok
-    //int beforeStart = mBufferSize - 1; // fail
-    //int beforeStart = 15000000; // fail
-    //int beforeStart = 10000000; // ok
     for(;
         mEnd != beforeStart && consume < aInputSize;
         mEnd = getNextIndex( mEnd ), consume += 1 )
     {
         memcpy( &mStreamBuffer[mEnd], &aInputStream[consume], 1 );
-        /*
-        if ( mEnd % 1000 == 0 )
-        {
-            printf( "beforeStart=%d mEnd=%d consume=%d\n", beforeStart, mEnd, consume );
-        }
-        */
     }
 
     return consume;
@@ -237,3 +243,10 @@ int AudioPlayer::getAvailableSize() const
     return mBufferSize - getUsedSize() - 1;
 }
 
+void AudioPlayer::dumpCallbackContext() const
+{
+    printf( "count = %d\n", mCallbackContext.mCount );
+    printf( "output underflow count = %d\n", mCallbackContext.mOutputUnderflowCount );
+    printf( "output overflow count = %d\n", mCallbackContext.mOutputOverflowCount );
+    printf( "priming count = %d\n", mCallbackContext.mPrimingCount );
+}
