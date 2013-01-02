@@ -28,6 +28,7 @@ MultimediaWidget::MultimediaWidget(QWidget *parent)
     mLibavWorker->moveToThread( libavThread );
     libavThread->start();
     play( QString( "video/outof1000kilometer.mpg" ) );
+
 }
 
 void MultimediaWidget::setupConnection()
@@ -195,3 +196,10 @@ void MultimediaWidget::getDecodeDoneSignal()
     mIsDecodeDone = true;
 }
 
+void MultimediaWidget::setAudioEffect( int pitchDelta, double leftVol, double rightVol, bool speechMode ) const
+{
+    mLibavWorker->setPitchSemiTones( pitchDelta );
+    mLibavWorker->setLeftChanVol( leftVol );
+    mLibavWorker->setRightChanVol( rightVol );
+    mLibavWorker->setSpeechMode( speechMode );
+}

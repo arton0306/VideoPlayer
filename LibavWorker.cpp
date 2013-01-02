@@ -19,7 +19,7 @@ LibavWorker::LibavWorker(QObject *parent)
     , mIsDecoding( false )
     , isAvDumpNeeded( false )
     , mIsSpeechMode( false )
-    , mSemiTonesDelta( +3 )
+    , mSemiTonesDelta( 0 )
     , mLeftChanVol( 1.0 )  // if the audio is mono, mLeftChanVol == mRightChanVol
     , mRightChanVol( 1.0 )
 {
@@ -112,7 +112,7 @@ void LibavWorker::stopDecoding()
 // can be called by player thread
 // audio effect
 void LibavWorker::setSpeechMode( bool aIsSpeechMode ) { mIsSpeechMode = aIsSpeechMode; }
-void LibavWorker::setPitchShiftInSemiTones( int aDelta /* -60 ~ +60 */ ) { mSemiTonesDelta = aDelta; }
+void LibavWorker::setPitchSemiTones( int aDelta /* -60 ~ +60 */ ) { mSemiTonesDelta = aDelta; }
 void LibavWorker::setVol( double aPercent /* 0.0 ~ 1.0 */ ) { mLeftChanVol = mRightChanVol = aPercent; }
 void LibavWorker::setLeftChanVol( double aPercent /* 0.0 ~ 1.0 */ ) { mLeftChanVol = aPercent; }
 void LibavWorker::setRightChanVol( double aPercent /* 0.0 ~ 1.0 */ ) { mRightChanVol = aPercent; }
@@ -543,7 +543,7 @@ void LibavWorker::init()
 void LibavWorker::setAudioEffect( int aChannel )
 {
     mAudioTuner.setSpeechMode( mIsSpeechMode );
-    mAudioTuner.setPitchShiftInSemiTones( mSemiTonesDelta );
+    mAudioTuner.setPitchSemiTones( mSemiTonesDelta );
     if ( aChannel == 1 )
         mAudioTuner.setVol( mLeftChanVol ); // mLeftChanVol == mRightChanVol if mono
     else

@@ -16,7 +16,7 @@ public:
 
     // effect
     void setSpeechMode( bool aIsSpeechMode );
-    void setPitchShiftInSemiTones( int aDelta /* -60 ~ +60 */ );
+    void setPitchSemiTones( int aDelta /* -60 ~ +60 */ );
     void setVol( double aPercent /* 0.0 ~ 1.0 */ );
     void setLeftChanVol( double aPercent /* 0.0 ~ 1.0 */ );  // cannot be called if mono
     void setRightChanVol( double aPercent /* 0.0 ~ 1.0 */ ); // connot be called if mono

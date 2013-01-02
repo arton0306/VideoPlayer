@@ -54,7 +54,7 @@ void AudioTuner::setSpeechMode( bool aIsSpeechMode )
 }
 
 // in sound touch, it will bound it automatically if aDelta out of range
-void AudioTuner::setPitchShiftInSemiTones( int aDelta /* -60 ~ +60 */ )
+void AudioTuner::setPitchSemiTones( int aDelta /* -60 ~ +60 */ )
 {
     mSemiTonesDelta = aDelta;
     mSoundTouch.setPitchSemiTones(aDelta);

@@ -37,6 +37,7 @@ public slots:
     void seek( int aMSec );
     void stop();
     void dumpAVStream();
+    void setAudioEffect( int pitchDelta, double leftVol, double rightVol, bool speechMode ) const;
 
 private:
     void setupConnection();

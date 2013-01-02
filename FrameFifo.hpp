@@ -1,7 +1,6 @@
 #ifndef FRAME_FIFO_HPP
 #define FRAME_FIFO_HPP
 
-#include "UINT64_C_incpp.hpp"
 extern "C"{
     #include "libavformat/avformat.h"
 }

@@ -69,30 +69,30 @@
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="mVolUpBtn">
+         <widget class="QPushButton" name="mLeftVolUpBtn">
           <property name="text">
-           <string>Vol +</string>
+           <string>LeftVol +</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="mVolDownBtn">
+         <widget class="QPushButton" name="mLeftVolDownBtn">
           <property name="text">
-           <string>Vol -</string>
+           <string>LeftVol -</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="mLeftChnlBtn">
+         <widget class="QPushButton" name="mRightVolUpBtn">
           <property name="text">
-           <string>Left Chnl</string>
+           <string>RightVol+</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="mStereoChnlBtn">
+         <widget class="QPushButton" name="mRightVolDownBtn">
           <property name="text">
-           <string>Stereo</string>
+           <string>RightVol-</string>
           </property>
          </widget>
         </item>
