@@ -28,7 +28,6 @@ HEADERS += \
     LibavWorker.hpp \
     QGLCanvas.hpp \
     QtSleepHacker.hpp \
-    UINT64_C_incpp.hpp \
     debug.hpp \
     WavOutFile.hpp \
     FrameFifo.hpp \

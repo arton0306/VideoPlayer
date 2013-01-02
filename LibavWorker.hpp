@@ -4,7 +4,6 @@
 #include <vector>
 #include <QObject>
 #include <QString>
-#include "UINT64_C_incpp.hpp"
 extern "C"{
     #include "libavcodec/avcodec.h"
     #include "libavformat/avformat.h"
@@ -26,7 +25,8 @@ public:
 
     explicit LibavWorker(QObject *parent = 0);
 
-public: // for other thread
+public:
+    // for other thread
     std::vector<uint8> popAllAudioStream();
     std::vector<uint8> popNextVideoFrame();
     void dropNextVideoFrame();
