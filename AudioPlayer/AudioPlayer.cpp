@@ -23,12 +23,7 @@ AudioPlayer::AudioPlayer
 
     mBufferSize = 32 * 1024;
     mStreamBuffer = (char*)malloc( mBufferSize );
-    // fillDefaultSample();
-    mStart = 0;
-    mEnd = 0;
-    mPlayByteCount = 0;
-    mWriteByteCount = 0;
-    mConsumedBytes = 0;
+    resetBufferInfo();
 
     PaError err;
     err = Pa_OpenDefaultStream( &mPaStream,
@@ -41,10 +36,20 @@ AudioPlayer::AudioPlayer
                                 this );
     assert( err == paNoError );
 
-    mPlaySec = 0.0;
     memset( &mCallbackContext, 0, sizeof( struct CallbackContext ) );
 
     // initDebugBuffer( aDebugSize );
+}
+
+void AudioPlayer::resetBufferInfo()
+{
+    // fillDefaultSample();
+    mStart = 0;
+    mEnd = 0;
+    mPlayByteCount = 0;
+    mWriteByteCount = 0;
+    mFramesWriteToBufferInCallback = 0;
+    mConsumedBytes = 0;
 }
 
 void AudioPlayer::fillDefaultSample()
@@ -154,19 +159,16 @@ void AudioPlayer::stop()
     PaError err = Pa_StopStream( mPaStream );
     // printf( "in stop err=%d\n", err);
     assert( err == paNoError );
-    mStart = 0;
-    mEnd = 0;
-    mPlayByteCount = 0;
-    mWriteByteCount = 0;
-    mConsumedBytes = 0;
+    resetBufferInfo();
 }
 
 double AudioPlayer::getPlaySec() const
 {
-    double const latency = Pa_GetStreamInfo( mPaStream )->outputLatency;
+    double const deviceLatency = Pa_GetStreamInfo( mPaStream )->outputLatency;
+    double const bufferLatency = mFramesWriteToBufferInCallback / mSampleRate;
     double const bytesPerSec = mSampleRate * Pa_GetSampleSize( mSampleFormat ) * mChannel;
     double const playtime = mConsumedBytes / bytesPerSec;
-    return playtime - latency;
+    return playtime - deviceLatency - bufferLatency;
 }
 
 /* static */ int AudioPlayer::callback
@@ -186,10 +188,12 @@ double AudioPlayer::getPlaySec() const
     (void) inputBuffer; /* Prevent unused variable warning. */
     (void) timeInfo;    /* Prevent unused variable warning. */
 
+    context->mFramesWriteToBufferInCallback = 0;
+    // printf( "frames per buffer=%u\n", framesPerBuffer );
     for( int i = 0; i < framesPerBuffer; ++i )
     {
         int const frameByteCount = context->mChannel * sampleBytes;
-        if ( context->mWriteByteCount > context->mPlayByteCount + frameByteCount )
+        if ( context->mWriteByteCount >= context->mPlayByteCount + frameByteCount )
         {
             for ( int j = 0; j < frameByteCount; ++j )
             {
@@ -199,6 +203,7 @@ double AudioPlayer::getPlaySec() const
                 context->mConsumedBytes += 1;
                 ++context->mPlayByteCount;
             }
+            ++context->mFramesWriteToBufferInCallback;
         }
         else
         {

@@ -73,7 +73,7 @@ void MultimediaWidget::getInitAVFrameReadySignal(double aFirstAudioFrameMsec)
 
 double MultimediaWidget::getRenewPeriod() const
 {
-    return 2.5;
+    return 5;
 }
 
 double MultimediaWidget::getAudioPlayedSecond() const
@@ -81,7 +81,9 @@ double MultimediaWidget::getAudioPlayedSecond() const
     // we use qt audio device in the old version,
     // the played-time got by Qt lib has about 40ms error
     // so we use a outside clock to sync audio&video, but we adjust the outside clock to match the played-time(by Qt) if the gap become too large ( >sAudioAdjustGapMs )
+
     // now, we use portaudio, remove that workaround
+    // ( but plyaing-time in portaudio still has buffer latency, if frames_per_buffer is 12xx, in 48000Hz audio, the letency is about 25ms )
 
     // DEBUG() << "get playing time: " << mAudioSeekTimeMSec / 1000.0 + mAudioPlayer->getPlaySec();
     return mAudioSeekTimeMSec / 1000.0 + mAudioPlayer->getPlaySec();
@@ -116,13 +118,13 @@ void MultimediaWidget::updateAV()
         // updateAV video frame if needed
         double const diff = currentPlaySecond - nextVideoFrameSecond;
 
-        if ( std::abs(diff) < 0.01 )
+        if ( std::abs(diff) < 0.015 )
         {
             vector<uint8> videoFrameStream = mLibavWorker->popNextVideoFrame();
             DEBUG() << "frame be drawed on the canvas, its exact time is:" << nextVideoFrameSecond << "\t currentSound:" << currentPlaySecond << "abs_diff: " << abs(diff);
             mVideoCanvas->renewFrame( static_cast<uint8_t const *>( &videoFrameStream[0] ), videoFrameStream.size() );
         }
-        else if ( diff > 0.01 )
+        else if ( diff > 0.015 )
         {
             // video frame too old
             DEBUG() << "drop a frame which should be presented at:" << nextVideoFrameSecond << "\t currentSound:" << currentPlaySecond;

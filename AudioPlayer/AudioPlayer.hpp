@@ -39,6 +39,7 @@ public:
 
 private:
     static bool sIsInit;
+    void resetBufferInfo();
     PaSampleFormat getPaSampleFormat( SampleFormat aSampleFormat ) const;
     int getPreviousIndex( int pos ) const;
     int getNextIndex( int pos ) const;
@@ -63,7 +64,7 @@ private:
     PaSampleFormat mSampleFormat;
     double mSampleRate;
 
-    // TODO: check volitile is needed or not
+    // TODO: check volatile is needed or not
     // audio buffer data
     char * mStreamBuffer;
     int mBufferSize;
@@ -71,11 +72,11 @@ private:
     int mEnd;   // the index where the users push from, the element on this index is always empty
     volatile long long mPlayByteCount;
     volatile long long mWriteByteCount;
+    unsigned long mFramesWriteToBufferInCallback;
     double mConsumedBytes; // we use this to estimate the playing time
 
     // port audio data
     PaStream * mPaStream;
-    double mPlaySec;
     struct CallbackContext
     {
         int mCount;
