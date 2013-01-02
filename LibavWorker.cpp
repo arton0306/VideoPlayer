@@ -523,16 +523,14 @@ bool LibavWorker::isAvFrameEnough( double a_fps ) const
     // this condition will consume lots mem because we'll read many video frame in order to get audio frames
     // this change due to soundtouch output stream at one go, and portaudio's callback need data ASAP
 
-    /*
     if ( ( mVideoFifo.getCount() > 1 ) &&
          ( mAudioFifo.getBytes() > 64 * 1024 ) )
     {
         return true;
     }
     return false;
-    */
 
-    return ( mVideoFifo.getCount() > 1 ) && ( mAudioFifo.getCount() > 1 );
+    // return ( mVideoFifo.getCount() > 1 ) && ( mAudioFifo.getCount() > 1 );
 
 }
 

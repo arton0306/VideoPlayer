@@ -13,7 +13,6 @@ MultimediaWidget::MultimediaWidget(QWidget *parent)
     , mLibavWorker( new LibavWorker )
     , mVideoCanvas( NULL )
     , mAudioPlayer( NULL )
-    , mAdjustMs( 0 )
     , mAudioSeekTimeMSec( 0.0 )
     , mIsDecodeDone( false )
 {
@@ -21,8 +20,6 @@ MultimediaWidget::MultimediaWidget(QWidget *parent)
     setupConnection();
 
     AudioPlayer::init();
-
-    mOutsideTime.start();
 
     mVideoCanvas = new QGLCanvas( this );
     mMainLayout->addWidget( mVideoCanvas );
@@ -67,8 +64,6 @@ void MultimediaWidget::getSeekStateSignal(bool aIsSuccess)
 
 void MultimediaWidget::getInitAVFrameReadySignal(double aFirstAudioFrameMsec)
 {
-    mOutsideTime.restart();
-    mAdjustMs = 0;
     mAudioSeekTimeMSec = aFirstAudioFrameMsec;
     DEBUG() << "libav seek from (ms): " << aFirstAudioFrameMsec;
     fetchAllAvailableAudioAndPush();
@@ -81,30 +76,15 @@ double MultimediaWidget::getRenewPeriod() const
     return 2.5;
 }
 
-double const MultimediaWidget::sAudioAdjustGapMs = 30.0;
 double MultimediaWidget::getAudioPlayedSecond() const
 {
-    // TODO
     // we use qt audio device in the old version,
     // the played-time got by Qt lib has about 40ms error
     // so we use a outside clock to sync audio&video, but we adjust the outside clock to match the played-time(by Qt) if the gap become too large ( >sAudioAdjustGapMs )
-    // now, we use portaudio, we check the outside clock is needed or not in the future
+    // now, we use portaudio, remove that workaround
 
-    /*
-    DEBUG() << "get playing time: " << mAudioSeekTimeMSec / 1000.0 + mAudioPlayer->getPlaySec();
+    // DEBUG() << "get playing time: " << mAudioSeekTimeMSec / 1000.0 + mAudioPlayer->getPlaySec();
     return mAudioSeekTimeMSec / 1000.0 + mAudioPlayer->getPlaySec();
-    */
-
-    double const msPortaudioTime = mAudioSeekTimeMSec + mAudioPlayer->getPlaySec() * 1000;
-    double const msSyncTime = mAudioSeekTimeMSec + mOutsideTime.elapsed() + mAdjustMs;
-
-    if ( std::abs( msPortaudioTime - msSyncTime ) > MultimediaWidget::sAudioAdjustGapMs )
-    {
-        mAdjustMs += msPortaudioTime - msSyncTime;
-        DEBUG() << "qt_time: " << msPortaudioTime << "  sync_time: " << msSyncTime;
-    }
-
-    return ( mAudioSeekTimeMSec + mOutsideTime.elapsed() + mAdjustMs ) / 1000.0;
 }
 
 void MultimediaWidget::fetchAllAvailableAudioAndPush()

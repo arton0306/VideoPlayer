@@ -61,12 +61,7 @@ private:
     // timer to fetch decoded frame
     QTimer mTimer;
 
-    // outside clock, independent to audio and video time
-    // The QTime is so suck that it can not be adjusted and start correctly, we use a var to deal with it
-    mutable QTime mOutsideTime;
-    mutable int mAdjustMs;
     double mAudioSeekTimeMSec;
-    static double const sAudioAdjustGapMs;
 
     // flag
     bool mIsDecodeDone;

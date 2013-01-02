@@ -21,7 +21,7 @@ AudioPlayer::AudioPlayer
     mSampleFormat = getPaSampleFormat( aSampleFormat );
     mSampleRate = aSampleRate;
 
-    mBufferSize = 64 * 1024;
+    mBufferSize = 32 * 1024;
     mStreamBuffer = (char*)malloc( mBufferSize );
     // fillDefaultSample();
     mStart = 0;
