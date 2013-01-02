@@ -25,7 +25,7 @@ public:
         int aChannel,
         SampleFormat aSampleFormat,
         double aSampleRate,
-        int aDebugSize = 3 * 1024 * 1024
+        int aDebugSize = 1 * 1024 * 1024
         );
     ~AudioPlayer();
     int pushStream

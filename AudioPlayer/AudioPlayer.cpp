@@ -37,8 +37,6 @@ AudioPlayer::AudioPlayer
     assert( err == paNoError );
 
     memset( &mCallbackContext, 0, sizeof( struct CallbackContext ) );
-
-    // initDebugBuffer( aDebugSize );
 }
 
 void AudioPlayer::resetBufferInfo()
@@ -98,6 +96,7 @@ void AudioPlayer::fillDefaultSample()
 
 void AudioPlayer::initDebugBuffer( int aDebugSize )
 {
+    /*
     mDebugBuffer.mDebugSize = aDebugSize;
     mDebugBuffer.mPlayStream = (char*)malloc( aDebugSize );
     memset( &mDebugBuffer.mPlayStream[0], 0, aDebugSize );
@@ -105,6 +104,7 @@ void AudioPlayer::initDebugBuffer( int aDebugSize )
     memset( &mDebugBuffer.mWriteStream[0], 0, aDebugSize );
     mDebugBuffer.mPlayStreamIndex = 0;
     mDebugBuffer.mWriteStreamIndex = 0;
+    */
 }
 
 AudioPlayer::~AudioPlayer()
@@ -113,6 +113,8 @@ AudioPlayer::~AudioPlayer()
     assert( err == paNoError );
 
     printf("~AudioPlayer\n");
+
+    /*
     FILE * f = fopen( "portaudio_playing.raw", "wb" );
     for ( int i = 0; i < mDebugBuffer.mDebugSize; ++i )
         fwrite(&mDebugBuffer.mPlayStream[i], 1, 1, f);
@@ -121,6 +123,7 @@ AudioPlayer::~AudioPlayer()
     free( mStreamBuffer ); mStreamBuffer = 0;
     free( mDebugBuffer.mPlayStream ); mDebugBuffer.mPlayStream = 0;
     free( mDebugBuffer.mWriteStream ); mDebugBuffer.mWriteStream = 0;
+    */
 }
 
 /* static */ bool AudioPlayer::init()
