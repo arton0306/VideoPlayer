@@ -12,7 +12,7 @@ AudioPlayer::AudioPlayer
     int aChannel,
     SampleFormat aSampleFormat,
     double aSampleRate,
-    int aDebugSize /* 30 * 1024 * 1024 */
+    int aDebugSize
 )
 {
     assert( sIsInit );
@@ -21,11 +21,13 @@ AudioPlayer::AudioPlayer
     mSampleFormat = getPaSampleFormat( aSampleFormat );
     mSampleRate = aSampleRate;
 
-    mBufferSize = 16 * 1024;
+    mBufferSize = 64 * 1024;
     mStreamBuffer = (char*)malloc( mBufferSize );
-    fillDefaultSample();
+    // fillDefaultSample();
     mStart = 0;
     mEnd = 0;
+    mPlayByteCount = 0;
+    mWriteByteCount = 0;
     mConsumedBytes = 0;
 
     PaError err;
@@ -42,10 +44,9 @@ AudioPlayer::AudioPlayer
     mPlaySec = 0.0;
     memset( &mCallbackContext, 0, sizeof( struct CallbackContext ) );
 
-    initDebugBuffer( aDebugSize );
+    // initDebugBuffer( aDebugSize );
 }
 
-// so we can debug conviniently
 void AudioPlayer::fillDefaultSample()
 {
     double ratio = 0;
@@ -155,6 +156,8 @@ void AudioPlayer::stop()
     assert( err == paNoError );
     mStart = 0;
     mEnd = 0;
+    mPlayByteCount = 0;
+    mWriteByteCount = 0;
     mConsumedBytes = 0;
 }
 
@@ -185,27 +188,26 @@ double AudioPlayer::getPlaySec() const
 
     for( int i = 0; i < framesPerBuffer; ++i )
     {
-        for ( int j = 0; j < context->mChannel; ++j )
+        int const frameByteCount = context->mChannel * sampleBytes;
+        if ( context->mWriteByteCount > context->mPlayByteCount + frameByteCount )
         {
-            for ( int k = 0; k < sampleBytes; ++k )
+            for ( int j = 0; j < frameByteCount; ++j )
             {
-                // write to portaudio output
                 char playingByte = context->mStreamBuffer[context->mStart];
                 *out++ = playingByte;
                 context->mStart = context->getNextIndex( context->mStart );
                 context->mConsumedBytes += 1;
-
-                // debug info
-                if ( context->mDebugBuffer.mPlayStreamIndex < context->mDebugBuffer.mDebugSize )
-                    context->mDebugBuffer.mPlayStream[context->mDebugBuffer.mPlayStreamIndex++] = playingByte;
+                ++context->mPlayByteCount;
+            }
+        }
+        else
+        {
+            for ( int j = 0; j < frameByteCount; ++j )
+            {
+                *out++ = 0;
             }
         }
     }
-
-    //context->recordStatusFlags( statusFlags );
-    //context->dumpCallbackContext();
-
-    //printf( "1st sample to output: %10.5lf , cur playing time:%10.5lf, diff: %10.5lf\n", timeInfo->outputBufferDacTime , context->getPlaySec(), timeInfo->outputBufferDacTime - context->getPlaySec() );
 
     return 0;
 }
@@ -216,8 +218,6 @@ void AudioPlayer::recordStatusFlags( PaStreamCallbackFlags flags )
     if( flags & paOutputUnderflow ) mCallbackContext.mOutputUnderflowCount += 1;
     if( flags & paOutputOverflow )  mCallbackContext.mOutputOverflowCount += 1;
     if( flags & paPrimingOutput )   mCallbackContext.mPrimingCount += 1;
-
-    //if( flags & paOutputUnderflow ) dumpCallbackContext();
 }
 
 PaSampleFormat AudioPlayer::getPaSampleFormat( SampleFormat aSampleFormat ) const
@@ -250,6 +250,7 @@ int AudioPlayer::pushStream(
         mEnd = getNextIndex( mEnd ), consume += 1 )
     {
         memcpy( &mStreamBuffer[mEnd], &aInputStream[consume], 1 );
+        ++mWriteByteCount;
     }
 
     return consume;

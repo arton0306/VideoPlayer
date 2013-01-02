@@ -44,8 +44,8 @@ private:
     int getNextIndex( int pos ) const;
     int getUsedSize() const;
     int getAvailableSize() const;
-    void fillDefaultSample();
-    void initDebugBuffer( int aDebugSize );
+    void fillDefaultSample(); // for debug
+    void initDebugBuffer( int aDebugSize ); // for debug
     void dumpCallbackContext() const;
     void recordStatusFlags( PaStreamCallbackFlags flags );
     static int callback
@@ -69,6 +69,8 @@ private:
     int mBufferSize;
     int mStart; // the callback will read from this index
     int mEnd;   // the index where the users push from, the element on this index is always empty
+    volatile long long mPlayByteCount;
+    volatile long long mWriteByteCount;
     double mConsumedBytes; // we use this to estimate the playing time
 
     // port audio data
