@@ -21,7 +21,12 @@ public:
     static bool init();
     static bool finish();
 
-    AudioPlayer( int aChannel, SampleFormat aSampleFormat, double aSampleRate );
+    AudioPlayer(
+        int aChannel,
+        SampleFormat aSampleFormat,
+        double aSampleRate,
+        int aDebugSize = 3 * 1024 * 1024
+        );
     ~AudioPlayer();
     int pushStream
         (
@@ -40,6 +45,7 @@ private:
     int getUsedSize() const;
     int getAvailableSize() const;
     void fillDefaultSample();
+    void initDebugBuffer( int aDebugSize );
     void dumpCallbackContext() const;
     void recordStatusFlags( PaStreamCallbackFlags flags );
     static int callback
@@ -68,7 +74,6 @@ private:
     // port audio data
     PaStream * mPaStream;
     double mPlaySec;
-
     struct CallbackContext
     {
         int mCount;
@@ -76,6 +81,16 @@ private:
         int mOutputOverflowCount;
         int mPrimingCount;
     } mCallbackContext;
+
+    // debug info, we will check the mPlayStream and mWriteStream is the same
+    struct DebugBuffer
+    {
+        int mDebugSize;
+        char * mPlayStream;
+        char * mWriteStream;
+        int mPlayStreamIndex;
+        int mWriteStreamIndex;
+    } mDebugBuffer;
 };
 
 #endif

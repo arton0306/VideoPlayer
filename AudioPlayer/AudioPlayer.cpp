@@ -7,7 +7,13 @@
 
 /* static */ bool AudioPlayer::sIsInit = false;
 
-AudioPlayer::AudioPlayer( int aChannel, SampleFormat aSampleFormat, double aSampleRate )
+AudioPlayer::AudioPlayer
+(
+    int aChannel,
+    SampleFormat aSampleFormat,
+    double aSampleRate,
+    int aDebugSize /* 30 * 1024 * 1024 */
+)
 {
     assert( sIsInit );
 
@@ -35,6 +41,8 @@ AudioPlayer::AudioPlayer( int aChannel, SampleFormat aSampleFormat, double aSamp
 
     mPlaySec = 0.0;
     memset( &mCallbackContext, 0, sizeof( struct CallbackContext ) );
+
+    initDebugBuffer( aDebugSize );
 }
 
 // so we can debug conviniently
@@ -82,12 +90,31 @@ void AudioPlayer::fillDefaultSample()
     }
 }
 
+void AudioPlayer::initDebugBuffer( int aDebugSize )
+{
+    mDebugBuffer.mDebugSize = aDebugSize;
+    mDebugBuffer.mPlayStream = (char*)malloc( aDebugSize );
+    memset( &mDebugBuffer.mPlayStream[0], 0, aDebugSize );
+    mDebugBuffer.mWriteStream = (char*)malloc( aDebugSize );
+    memset( &mDebugBuffer.mWriteStream[0], 0, aDebugSize );
+    mDebugBuffer.mPlayStreamIndex = 0;
+    mDebugBuffer.mWriteStreamIndex = 0;
+}
+
 AudioPlayer::~AudioPlayer()
 {
     PaError err = Pa_CloseStream( mPaStream );
     assert( err == paNoError );
 
-    free( mStreamBuffer );
+    printf("~AudioPlayer\n");
+    FILE * f = fopen( "portaudio_playing.raw", "wb" );
+    for ( int i = 0; i < mDebugBuffer.mDebugSize; ++i )
+        fwrite(&mDebugBuffer.mPlayStream[i], 1, 1, f);
+    fclose(f);
+
+    free( mStreamBuffer ); mStreamBuffer = 0;
+    free( mDebugBuffer.mPlayStream ); mDebugBuffer.mPlayStream = 0;
+    free( mDebugBuffer.mWriteStream ); mDebugBuffer.mWriteStream = 0;
 }
 
 /* static */ bool AudioPlayer::init()
@@ -162,9 +189,15 @@ double AudioPlayer::getPlaySec() const
         {
             for ( int k = 0; k < sampleBytes; ++k )
             {
-                *out++ = context->mStreamBuffer[context->mStart];
+                // write to portaudio output
+                char playingByte = context->mStreamBuffer[context->mStart];
+                *out++ = playingByte;
                 context->mStart = context->getNextIndex( context->mStart );
                 context->mConsumedBytes += 1;
+
+                // debug info
+                if ( context->mDebugBuffer.mPlayStreamIndex < context->mDebugBuffer.mDebugSize )
+                    context->mDebugBuffer.mPlayStream[context->mDebugBuffer.mPlayStreamIndex++] = playingByte;
             }
         }
     }
