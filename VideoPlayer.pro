@@ -21,7 +21,8 @@ SOURCES += \
     AVInfo.cpp \
     Sleep.cpp \
     MultimediaWidget.cpp \
-    AudioTuner.cpp
+    AudioTuner.cpp \
+    VolumeTuner.cpp
 
 HEADERS += \
     VideoPlayer.hpp \
@@ -34,7 +35,8 @@ HEADERS += \
     AVInfo.hpp \
     Sleep.hpp \
     MultimediaWidget.hpp \
-    AudioTuner.hpp
+    AudioTuner.hpp \
+    VolumeTuner.hpp
 
 FORMS    += VideoPlayer.ui \
             MultimediaWidget.ui
