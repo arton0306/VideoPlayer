@@ -12,6 +12,7 @@
 #include "ui_MultimediaWidget.h"
 #include "AVInfo.hpp"
 #include "FrameFifo.hpp"
+#include "VolumeTuner.hpp"
 
 class QGLCanvas;
 
@@ -45,6 +46,7 @@ private:
     void fetchAllAvailableAudioAndPush();
     double getAudioPlayedSecond() const;
     double getRenewPeriod() const;
+    int pushAudioStream( std::vector<uint8> const & stream ) const;
 
     // the decoded thread
     LibavWorker * mLibavWorker;
@@ -52,7 +54,8 @@ private:
     // the widget to play video
     QGLCanvas * mVideoCanvas;
 
-    // the objects to play audio
+    // the interface to play audio
+    VolumeTuner * mVolumnTuner;
     AudioPlayer * mAudioPlayer;
     std::vector<uint8> mAudioStreamBuffer;
 

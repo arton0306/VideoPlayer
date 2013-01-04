@@ -8,6 +8,8 @@ VolumeTuner::VolumeTuner( int ch, AudioPlayer::SampleFormat sampleFmt )
 {
     mChannel = ch;
     mSampleFormat = sampleFmt;
+    mLeftVol = 1.0;
+    mRightVol = 1.0;
 }
 
 void VolumeTuner::tune( vector<uint8> & stream ) const
@@ -63,7 +65,7 @@ bool VolumeTuner::isFormatSupport( AudioPlayer::SampleFormat sampleFmt ) const
     }
 }
 
-void VolumeTuner::tuneLeftVol( double v )
+void VolumeTuner::setLeftVol( double v )
 {
     mLeftVol = v;
     if ( mLeftVol > 1.0 ) mLeftVol = 1.0;
@@ -71,7 +73,7 @@ void VolumeTuner::tuneLeftVol( double v )
     if ( mChannel == 1 ) mRightVol = mLeftVol;
 }
 
-void VolumeTuner::tuneRightVol( double v )
+void VolumeTuner::setRightVol( double v )
 {
     mRightVol = v;
     if ( mRightVol > 1.0 ) mRightVol = 1.0;

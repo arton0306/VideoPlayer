@@ -11,8 +11,8 @@ class VolumeTuner
     public:
         VolumeTuner( int ch, AudioPlayer::SampleFormat sampleFmt );
         void tune( std::vector<uint8> & stream ) const;
-        void tuneLeftVol( double v );
-        void tuneRightVol( double v );
+        void setLeftVol( double v );
+        void setRightVol( double v );
 
     private:
         bool isFormatSupport( AudioPlayer::SampleFormat sampleFmt ) const;

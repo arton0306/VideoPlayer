@@ -12,6 +12,7 @@ MultimediaWidget::MultimediaWidget(QWidget *parent)
     : QWidget(parent)
     , mLibavWorker( new LibavWorker )
     , mVideoCanvas( NULL )
+    , mVolumnTuner( NULL )
     , mAudioPlayer( NULL )
     , mAudioSeekTimeMSec( 0.0 )
     , mIsDecodeDone( false )
@@ -50,6 +51,8 @@ void MultimediaWidget::getReadyToDecodeSignal( AVInfo aAvInfo )
     mAudioSeekTimeMSec = 0;
     delete mAudioPlayer;
     mAudioPlayer = new AudioPlayer( aAvInfo.getAudioChannel(), aAvInfo.getAudioSampleFormat(), aAvInfo.getAudioSampleRate() );
+    delete mVolumnTuner;
+    mVolumnTuner = new VolumeTuner( aAvInfo.getAudioChannel(), aAvInfo.getAudioSampleFormat() );
 }
 
 void MultimediaWidget::getSeekStateSignal(bool aIsSuccess)
@@ -90,12 +93,20 @@ double MultimediaWidget::getAudioPlayedSecond() const
     return mAudioSeekTimeMSec / 1000.0 + mAudioPlayer->getPlaySec();
 }
 
+int MultimediaWidget::pushAudioStream( vector<uint8> const & stream ) const
+{
+    return mAudioPlayer->pushStream( reinterpret_cast<const char *>( &stream[0] ), stream.size() );
+}
+
 void MultimediaWidget::fetchAllAvailableAudioAndPush()
 {
     vector<uint8> audioStreamFetched = mLibavWorker->popAllAudioStream();
-    int const writeBytes = mAudioPlayer->pushStream( reinterpret_cast<const char *>( &audioStreamFetched[0] ), audioStreamFetched.size() );
+    mVolumnTuner->setRightVol( 0.0 );
+    mVolumnTuner->tune( audioStreamFetched );
+    int const writeBytes = pushAudioStream( audioStreamFetched );
     mAudioStreamBuffer.insert( mAudioStreamBuffer.end(), audioStreamFetched.begin() + writeBytes, audioStreamFetched.end() );
 }
+
 
 void MultimediaWidget::updateAV()
 {
@@ -105,7 +116,7 @@ void MultimediaWidget::updateAV()
     }
     else
     {
-        int const writeBytes = mAudioPlayer->pushStream( reinterpret_cast<const char *>( &mAudioStreamBuffer[0] ), mAudioStreamBuffer.size() );
+        int const writeBytes = pushAudioStream( mAudioStreamBuffer );
         mAudioStreamBuffer.erase( mAudioStreamBuffer.begin(), mAudioStreamBuffer.begin() + writeBytes );
     }
 
