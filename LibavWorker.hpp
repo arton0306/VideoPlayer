@@ -85,8 +85,6 @@ private:
     AudioTuner mAudioTuner;
     bool mIsSpeechMode;
     int mSemiTonesDelta;
-    double mLeftChanVol;  // if the audio is mono, mLeftChanVol == mRightChanVol
-    double mRightChanVol;
 };
 
 #endif // LIBAV_WORKER_HPP

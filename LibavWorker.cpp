@@ -20,8 +20,6 @@ LibavWorker::LibavWorker(QObject *parent)
     , isAvDumpNeeded( false )
     , mIsSpeechMode( false )
     , mSemiTonesDelta( 0 )
-    , mLeftChanVol( 1.0 )  // if the audio is mono, mLeftChanVol == mRightChanVol
-    , mRightChanVol( 1.0 )
 {
 }
 
@@ -113,9 +111,6 @@ void LibavWorker::stopDecoding()
 // audio effect
 void LibavWorker::setSpeechMode( bool aIsSpeechMode ) { mIsSpeechMode = aIsSpeechMode; }
 void LibavWorker::setPitchSemiTones( int aDelta /* -60 ~ +60 */ ) { mSemiTonesDelta = aDelta; }
-void LibavWorker::setVol( double aPercent /* 0.0 ~ 1.0 */ ) { mLeftChanVol = mRightChanVol = aPercent; }
-void LibavWorker::setLeftChanVol( double aPercent /* 0.0 ~ 1.0 */ ) { mLeftChanVol = aPercent; }
-void LibavWorker::setRightChanVol( double aPercent /* 0.0 ~ 1.0 */ ) { mRightChanVol = aPercent; }
 
 void LibavWorker::setFileName( QString aFileName )
 {
@@ -519,12 +514,12 @@ void LibavWorker::saveAVInfoToFile( AVInfo const & aAVInfo, char const * aFileNa
 bool LibavWorker::isAvFrameEnough( double a_fps ) const
 {
     // video: at least 2 frames
-    // audio: 64KB data, in 48000Hz, 2ch, int13, can play 0.34 second
+    // audio: 16KB data, in 48000Hz, 2ch, int13, can play 0.085 second
     // this condition will consume lots mem because we'll read many video frame in order to get audio frames
     // this change due to soundtouch output stream at one go, and portaudio's callback need data ASAP
 
     if ( ( mVideoFifo.getCount() > 1 ) &&
-         ( mAudioFifo.getBytes() > 64 * 1024 ) )
+         ( mAudioFifo.getBytes() > 16 * 1024 ) )
     {
         return true;
     }
@@ -544,11 +539,4 @@ void LibavWorker::setAudioEffect( int aChannel )
 {
     mAudioTuner.setSpeechMode( mIsSpeechMode );
     mAudioTuner.setPitchSemiTones( mSemiTonesDelta );
-    if ( aChannel == 1 )
-        mAudioTuner.setVol( mLeftChanVol ); // mLeftChanVol == mRightChanVol if mono
-    else
-    {
-        mAudioTuner.setLeftChanVol( mLeftChanVol );
-        mAudioTuner.setRightChanVol( mRightChanVol );
-    }
 }

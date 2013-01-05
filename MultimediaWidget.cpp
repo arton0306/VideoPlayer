@@ -101,7 +101,6 @@ int MultimediaWidget::pushAudioStream( vector<uint8> const & stream ) const
 void MultimediaWidget::fetchAllAvailableAudioAndPush()
 {
     vector<uint8> audioStreamFetched = mLibavWorker->popAllAudioStream();
-    mVolumnTuner->setRightVol( 0.0 );
     mVolumnTuner->tune( audioStreamFetched );
     int const writeBytes = pushAudioStream( audioStreamFetched );
     mAudioStreamBuffer.insert( mAudioStreamBuffer.end(), audioStreamFetched.begin() + writeBytes, audioStreamFetched.end() );
@@ -210,7 +209,8 @@ void MultimediaWidget::getDecodeDoneSignal()
 void MultimediaWidget::setAudioEffect( int pitchDelta, double leftVol, double rightVol, bool speechMode ) const
 {
     mLibavWorker->setPitchSemiTones( pitchDelta );
-    mLibavWorker->setLeftChanVol( leftVol );
-    mLibavWorker->setRightChanVol( rightVol );
     mLibavWorker->setSpeechMode( speechMode );
+
+    mVolumnTuner->setLeftVol( leftVol );
+    mVolumnTuner->setRightVol( rightVol );
 }

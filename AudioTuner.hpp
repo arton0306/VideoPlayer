@@ -17,9 +17,6 @@ public:
     // effect
     void setSpeechMode( bool aIsSpeechMode );
     void setPitchSemiTones( int aDelta /* -60 ~ +60 */ );
-    void setVol( double aPercent /* 0.0 ~ 1.0 */ );
-    void setLeftChanVol( double aPercent /* 0.0 ~ 1.0 */ );  // cannot be called if mono
-    void setRightChanVol( double aPercent /* 0.0 ~ 1.0 */ ); // connot be called if mono
 
 private:
     std::vector<uint8> internalProcess();
@@ -35,8 +32,6 @@ private:
 
     // process effect
     int mSemiTonesDelta;
-    double mLeftChanVol;  // if the audio is mono, mLeftChanVol == mRightChanVol
-    double mRightChanVol;
 
     // after souch touch processing the input samples,
     static int const OUTPUT_BUFFER_SIZE = 1024 * 100;
