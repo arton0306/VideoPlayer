@@ -73,6 +73,7 @@ private:
     QString mFileName;
     FrameFifo mVideoFifo;
     FrameFifo mAudioFifo;
+    double mFirstAudioFrameTime;
     bool mIsReceiveStopSignal; // if libav is in decoding loop, it will quit the loop when the flag be set true
     bool mIsReceiveSeekSignal;
     int mSeekMSec;             // other thread will set mIsReceiveSeekSignal and mSeekTime to notice libav thread

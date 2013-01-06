@@ -13,6 +13,7 @@ using namespace std;
 
 LibavWorker::LibavWorker(QObject *parent)
     : QObject(parent)
+    , mFirstAudioFrameTime( 0.0 )
     , mIsReceiveStopSignal( false )
     , mIsReceiveSeekSignal( false )
     , mSeekMSec( 0 )
@@ -273,7 +274,7 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
     if ( isAvDumpNeeded ) saveAVInfoToFile( avInfo, (mFileName + ".avinfo.txt").toStdString().c_str());
     readyToDecode( avInfo );
 
-    bool is_new_decode_request = true; // true if the users want to decode from new position ( seek or new play )
+    bool is_seek_or_new_play = true;
 
     while ( true )
     {
@@ -299,14 +300,14 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
             if ( ret < 0 )
             {
                 seekState( false );
-                is_new_decode_request = false;
+                is_seek_or_new_play = false;
                 DEBUG() << "============================================================ seek fail";
             }
             else
             {
                 seekState( true );
                 mAudioTuner.flush();
-                is_new_decode_request = true;
+                is_seek_or_new_play = true;
                 mVideoFifo.clear();
                 mAudioFifo.clear();
             }
@@ -389,14 +390,13 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
                         memcpy( &decodedStream[0], decodedFrame->data[0], data_size );
                         setAudioEffect( audioCodecCtx->channels );
 
-                        static double firstAudioFrameTime = 0.0;
                         if ( mAudioFifo.isEmpty() )
-                            firstAudioFrameTime = av_q2d(formatCtx->streams[audioStreamIndex]->time_base) * packet.pts;
+                            mFirstAudioFrameTime = av_q2d(formatCtx->streams[audioStreamIndex]->time_base) * packet.pts;
 
                         vector<uint8> tunedAudioStream = mAudioTuner.process( decodedStream );
                         if ( tunedAudioStream.size() != 0 )
-                            mAudioFifo.push( tunedAudioStream, firstAudioFrameTime ); // the non-first audio time frame is useless
-                        //mAudioFifo.push( decodedStream, firstAudioFrameTime ); // the non-first audio time frame is useless
+                            mAudioFifo.push( tunedAudioStream, 0.0 ); // the audio time frame is dummy
+                        //mAudioFifo.push( decodedStream, 0.0 ); // the audio time frame is dummy
 
                         if ( isAvDumpNeeded )
                             appendAudioPcmToFile( decodedFrame->data[0], data_size, (mFileName + ".pcm").toStdString().c_str() ); // this will spend lots time, which will cause the delay in video
@@ -428,10 +428,10 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
         // determine whether decoded frame is enough and determine whether interrupt signal received
         while ( isAvFrameEnough( fps ) && !mIsReceiveStopSignal && !mIsReceiveSeekSignal )
         {
-            if ( is_new_decode_request )
+            if ( is_seek_or_new_play )
             {
-                initAVFrameReady( mAudioFifo.getFrontFrameSecond() * 1000);
-                is_new_decode_request = false;
+                initAVFrameReady( mFirstAudioFrameTime * 1000);
+                is_seek_or_new_play = false;
             }
             Sleep::msleep( 1 );
         }
