@@ -17,10 +17,13 @@ AVInfo::AVInfo
     mAudioSampleFormat = turnLibavSampleFormat( aSampleFormat );
     mAudioSampleRate = aAudioSampleRate;
     mAudioBitsPerSample = aAudioBitsPerSample;
+
+    dump();
 }
 
 AudioPlayer::SampleFormat AVInfo::turnLibavSampleFormat( AVSampleFormat aFormat )
 {
+    DEBUG() << "get a audio sample format: " << av_get_sample_fmt_name(aFormat);
     /*
         not support libav sample format:
         AV_SAMPLE_FMT_U8P,
@@ -31,13 +34,38 @@ AudioPlayer::SampleFormat AVInfo::turnLibavSampleFormat( AVSampleFormat aFormat 
         AV_SAMPLE_FMT_DBL,
         AV_SAMPLE_FMT_NONE,
         AV_SAMPLE_FMT_NB
+
+        enum AVSampleFormat {
+            AV_SAMPLE_FMT_NONE = -1,
+            AV_SAMPLE_FMT_U8,          ///< unsigned 8 bits
+            AV_SAMPLE_FMT_S16,         ///< signed 16 bits
+            AV_SAMPLE_FMT_S32,         ///< signed 32 bits
+            AV_SAMPLE_FMT_FLT,         ///< float
+            AV_SAMPLE_FMT_DBL,         ///< double
+
+            AV_SAMPLE_FMT_U8P,         ///< unsigned 8 bits, planar
+            AV_SAMPLE_FMT_S16P,        ///< signed 16 bits, planar
+            AV_SAMPLE_FMT_S32P,        ///< signed 32 bits, planar
+            AV_SAMPLE_FMT_FLTP,        ///< float, planar
+            AV_SAMPLE_FMT_DBLP,        ///< double, planar
+
+            AV_SAMPLE_FMT_NB           ///< Number of sample formats. DO NOT USE if linking dynamically
+        };
     */
     switch ( aFormat )
     {
-        case AV_SAMPLE_FMT_U8:  return AudioPlayer::UInt8;
-        case AV_SAMPLE_FMT_S16: return AudioPlayer::Int16;
-        case AV_SAMPLE_FMT_S32: return AudioPlayer::Int32;
-        case AV_SAMPLE_FMT_FLT: return AudioPlayer::Float32;
+        case AV_SAMPLE_FMT_U8:
+        case AV_SAMPLE_FMT_U8P: return AudioPlayer::UInt8;
+
+        case AV_SAMPLE_FMT_S16:
+        case AV_SAMPLE_FMT_S16P:return AudioPlayer::Int16;
+
+        case AV_SAMPLE_FMT_S32:
+        case AV_SAMPLE_FMT_S32P:return AudioPlayer::Int32;
+
+        case AV_SAMPLE_FMT_FLT:
+        case AV_SAMPLE_FMT_FLTP:return AudioPlayer::Float32;
+
         default:                return AudioPlayer::Error;
     }
 }

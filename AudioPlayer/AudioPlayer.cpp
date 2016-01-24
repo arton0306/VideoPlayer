@@ -2,6 +2,7 @@
 #include "stdio.h"
 #include <cassert>
 #include <cstring>
+#include "debug.hpp"
 
 #include "AudioPlayer.hpp"
 
@@ -25,7 +26,10 @@ AudioPlayer::AudioPlayer
     mStreamBuffer = (char*)malloc( mBufferSize );
     resetBufferInfo();
 
-    PaError err;
+    PaError err = paNoError;
+
+    DEBUG() << "aSampleFormat:" << aSampleFormat << ", mSampleFormat:" << mSampleFormat << endl;
+
     err = Pa_OpenDefaultStream( &mPaStream,
                                 0,                              /* no input channels */
                                 mChannel,
@@ -34,7 +38,10 @@ AudioPlayer::AudioPlayer
                                 paFramesPerBufferUnspecified,   /* frames per buffer */
                                 AudioPlayer::callback,
                                 this );
-    assert( err == paNoError );
+    if (err != paNoError) {
+        DEBUG() << "Pa_OpenDefaultStream result:" << err << " (" << Pa_GetErrorText(err) << ")" << endl;
+        assert(false);
+    }
 
     memset( &mCallbackContext, 0, sizeof( struct CallbackContext ) );
 }
@@ -110,7 +117,7 @@ void AudioPlayer::initDebugBuffer( int aDebugSize )
 AudioPlayer::~AudioPlayer()
 {
     PaError err = Pa_CloseStream( mPaStream );
-    assert( err == paNoError );
+    assert( err == paNoError );    
 
     printf("~AudioPlayer\n");
 
@@ -128,23 +135,32 @@ AudioPlayer::~AudioPlayer()
 
 /* static */ bool AudioPlayer::init()
 {
-    PaError err = paNoError;
+    PaError err = paNotInitialized;
     if ( !sIsInit )
     {
         err = Pa_Initialize();
-        assert( err == paNoError );
+        if (err != paNoError) {
+            DEBUG() << "Pa_Initialize result:" << err << " (" << Pa_GetErrorText(err) << ")" << endl;
+            assert(false);
+        }
         sIsInit = true;
     }
+    assert(err == paNoError);
+    assert(Pa_GetDeviceCount() > 0);
+
     return err;
 }
 
 /* static */ bool AudioPlayer::finish()
 {
-    PaError err = paNoError;
+    PaError err = paNotInitialized;
     if ( sIsInit )
     {
         PaError err = Pa_Terminate();
-        assert( err == paNoError );
+        if( err != paNoError ) {
+            printf(  "Pa_Terminate error: %s\n", Pa_GetErrorText( err ) );
+            assert(false);
+        }
         sIsInit = false;
     }
     return err;

@@ -2,7 +2,7 @@
 #define VOLUMETUNER_HPP
 
 #include <vector>
-#include "AudioPlayer.hpp"
+#include "AudioPlayer/AudioPlayer.hpp"
 
 typedef unsigned char uint8;
 

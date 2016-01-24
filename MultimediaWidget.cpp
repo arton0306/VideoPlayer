@@ -25,11 +25,13 @@ MultimediaWidget::MultimediaWidget(QWidget *parent)
     mVideoCanvas = new QGLCanvas( this );
     mMainLayout->addWidget( mVideoCanvas );
 
-    QThread * libavThread = new QThread;
-    mLibavWorker->moveToThread( libavThread );
-    libavThread->start();
-    play( QString( "video/outof1000kilometer.mpg" ) );
-
+    if (1) {
+        QThread * libavThread = new QThread;
+        mLibavWorker->moveToThread( libavThread );
+        libavThread->start();
+        play( QString( "./lulu.mp4" ) );
+        //play( QString( "./1000km.mpg" ) );
+    }
 }
 
 void MultimediaWidget::setupConnection()
@@ -157,8 +159,8 @@ void MultimediaWidget::updateAV()
 QAudioFormat MultimediaWidget::getAudioFormat( AVInfo const & aAvInfo ) const
 {
     QAudioFormat audioFormat;
-    audioFormat.setFrequency( aAvInfo.getAudioSampleRate() );
-    audioFormat.setChannels( aAvInfo.getAudioChannel() );
+    audioFormat.setSampleRate( aAvInfo.getAudioSampleRate() );
+    audioFormat.setChannelCount( aAvInfo.getAudioChannel() );
     audioFormat.setSampleSize( aAvInfo.getAudioBitsPerSample() );
     audioFormat.setCodec( "audio/pcm" );
     audioFormat.setByteOrder(QAudioFormat::LittleEndian);

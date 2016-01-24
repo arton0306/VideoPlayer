@@ -2,6 +2,9 @@
 #include <algorithm>
 #include <fstream>
 #include <QThread>
+extern "C" {
+    #include <libavutil/imgutils.h>
+}
 #include "LibavWorker.hpp"
 #include "QtSleepHacker.hpp"
 #include "debug.hpp"
@@ -10,6 +13,21 @@
 #define BITS_PER_BYTES 8
 
 using namespace std;
+
+static void interleave(uint8_t **data, uint8_t *outbuf, int channels,
+    enum AVSampleFormat sample_fmt, int data_bytes)
+{
+    assert(av_sample_fmt_is_planar(sample_fmt));
+    int sample_bytes = av_get_bytes_per_sample(sample_fmt);
+    assert(data_bytes % (channels*sample_bytes) == 0);
+    int chn_bytes = data_bytes / channels;
+    for (int i = 0; i < chn_bytes; i+=sample_bytes) {
+        for (int chn = 0; chn < channels; chn++) {
+            memcpy(outbuf, data[chn]+i, sample_bytes);
+            outbuf += sample_bytes;
+        }
+    }
+}
 
 LibavWorker::LibavWorker(QObject *parent)
     : QObject(parent)
@@ -211,17 +229,17 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
     ******************************************/
 
     // Declare frame
-    AVFrame *decodedFrame = avcodec_alloc_frame();
-    AVFrame *pFrameRGB = avcodec_alloc_frame();
+    AVFrame *decodedFrame = av_frame_alloc();
+    AVFrame *pFrameRGB = av_frame_alloc();
     assert( decodedFrame != NULL && pFrameRGB != NULL );
 
     // Create a buffer for converted frame
-    uint8_t * buffer = (uint8_t *)av_malloc( avpicture_get_size( PIX_FMT_RGB24, videoCodecCtx->width, videoCodecCtx->height ) );
+    uint8_t * buffer = (uint8_t *)av_malloc( av_image_get_buffer_size( AV_PIX_FMT_RGB24, videoCodecCtx->width, videoCodecCtx->height, 1 ) );
 
     // Assign appropriate parts of buffer to image planes in pFrameRGB
     // Note that pFrameRGB is an AVFrame, but AVFrame is a superset
     // of AVPicture
-    avpicture_fill( (AVPicture *)pFrameRGB, buffer, PIX_FMT_RGB24,
+    avpicture_fill( (AVPicture *)pFrameRGB, buffer, AV_PIX_FMT_RGB24,
         videoCodecCtx->width, videoCodecCtx->height );
 
     /******************************************
@@ -237,24 +255,9 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
     //DEBUG() << "video fps:" << fps;
     //DEBUG() << "videoStreamIndex:" << videoStreamIndex << "    audioStreamIndex:" << audioStreamIndex;
 
-    /* libav audio sample format ( ref: libav\libavutil\samplefmt.h )
-    enum AVSampleFormat {
-        AV_SAMPLE_FMT_NONE = -1,
-        AV_SAMPLE_FMT_U8,          ///< unsigned 8 bits
-        AV_SAMPLE_FMT_S16,         ///< signed 16 bits
-        AV_SAMPLE_FMT_S32,         ///< signed 32 bits
-        AV_SAMPLE_FMT_FLT,         ///< float
-        AV_SAMPLE_FMT_DBL,         ///< double
-
-        AV_SAMPLE_FMT_U8P,         ///< unsigned 8 bits, planar
-        AV_SAMPLE_FMT_S16P,        ///< signed 16 bits, planar
-        AV_SAMPLE_FMT_S32P,        ///< signed 32 bits, planar
-        AV_SAMPLE_FMT_FLTP,        ///< float, planar
-        AV_SAMPLE_FMT_DBLP,        ///< double, planar
-
-        AV_SAMPLE_FMT_NB           ///< Number of sample formats. DO NOT USE if linking dynamically
-    };
-    */
+    audioCodecCtx->sample_fmt;
+    DEBUG() << audioCodecCtx->sample_fmt << endl;
+    // assert(false);
 
     mAudioTuner.init(
         audioCodecCtx->channels,
@@ -281,6 +284,7 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
         bool stop_flag = false;
 
         // determine whether be forced stop
+        /*
         if ( mIsReceiveStopSignal )
         {
             mVideoFifo.clear();
@@ -292,8 +296,8 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
         // determine whether seek or not
         if ( mIsReceiveSeekSignal )
         {
-            const long long INT64_MIN = (-0x7fffffffffffffffLL - 1);
-            const long long INT64_MAX = (9223372036854775807LL);
+            //const long long INT64_MIN = (-0x7fffffffffffffffLL - 1);
+            //const long long INT64_MAX = (9223372036854775807LL);
             // timestamp = seconds * AV_TIME_BASE
             int ret = avformat_seek_file( formatCtx, -1, INT64_MIN, (double)mSeekMSec / 1000 * AV_TIME_BASE, INT64_MAX, 0);
             DEBUG() << "============================================================ seek " << (double)mSeekMSec / 1000 << " return:" << ret;
@@ -313,6 +317,7 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
             }
             mIsReceiveSeekSignal = false;
         }
+        */
 
         // read a frame
         if ( av_read_frame( formatCtx, &packet ) < 0 || stop_flag )
@@ -365,11 +370,10 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
         }
         else if ( packet.stream_index == audioStreamIndex )
         {
-            avcodec_get_frame_defaults( decodedFrame );
+            av_frame_unref( decodedFrame );
             uint8_t * const packetDataHead = packet.data;
             while ( packet.size > 0 )
             {
-                // Decod audio frame
                 int const bytesUsed = avcodec_decode_audio4( audioCodecCtx, decodedFrame, &frameFinished, &packet );
                 if ( bytesUsed < 0 )
                 {
@@ -387,19 +391,25 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
                         // apply audio effect and push audio data to fifo
                         // notice that we don't push meaningful time value with the stream into the fifo
                         vector<uint8> decodedStream( data_size, 0 );
-                        memcpy( &decodedStream[0], decodedFrame->data[0], data_size );
+                        interleave(decodedFrame->data, &decodedStream[0],
+                            audioCodecCtx->channels, audioCodecCtx->sample_fmt, data_size);
                         setAudioEffect( audioCodecCtx->channels );
+
+                        if ( isAvDumpNeeded ) {
+                             // this will spend lots time, which will cause the delay in video
+                            appendAudioPcmToFile( &decodedStream[0], data_size, (mFileName + ".pcm").toStdString().c_str() );
+                        }
 
                         if ( mAudioFifo.isEmpty() )
                             mFirstAudioFrameTime = av_q2d(formatCtx->streams[audioStreamIndex]->time_base) * packet.pts;
 
-                        vector<uint8> tunedAudioStream = mAudioTuner.process( decodedStream );
-                        if ( tunedAudioStream.size() != 0 )
-                            mAudioFifo.push( tunedAudioStream, 0.0 ); // the audio time frame is dummy
-                        //mAudioFifo.push( decodedStream, 0.0 ); // the audio time frame is dummy
-
-                        if ( isAvDumpNeeded )
-                            appendAudioPcmToFile( decodedFrame->data[0], data_size, (mFileName + ".pcm").toStdString().c_str() ); // this will spend lots time, which will cause the delay in video
+                        bool do_pitch_shift = true;
+                        if (do_pitch_shift) {
+                            decodedStream = mAudioTuner.process( decodedStream );
+                        }
+                        if ( decodedStream.size() != 0 ) {
+                            mAudioFifo.push( decodedStream, 0.0 ); // the audio time frame is dummy
+                        }
 
                         DEBUG() << "p ndx:" << packetIndex << "     audio frame ndx:" << audioFrameIndex << "     PTS:" << packet.pts << "     DTS:" << packet.dts << " TimeBase:" << av_q2d(formatCtx->streams[audioStreamIndex]->time_base) << " *dts:" << av_q2d(formatCtx->streams[audioStreamIndex]->time_base) * packet.pts;
                         ++audioFrameIndex;
@@ -469,7 +479,7 @@ void LibavWorker::convertToRGBFrame( AVCodecContext * videoCodecCtx, AVFrame * d
     // Convert the image from its native format to RGB
     pConvertedSwsCtx = sws_getContext(
         videoCodecCtx->width, videoCodecCtx->height, videoCodecCtx->pix_fmt,
-        videoCodecCtx->width, videoCodecCtx->height, PIX_FMT_RGB24,
+        videoCodecCtx->width, videoCodecCtx->height, AV_PIX_FMT_RGB24,
         SWS_BILINEAR, NULL, NULL, NULL );
 
     sws_scale( pConvertedSwsCtx,

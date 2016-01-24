@@ -2,7 +2,7 @@
 #define AUDIOTUNER_HPP
 
 #include <vector>
-#include "SoundTouch.h"
+#include <SoundTouch.h>
 
 typedef unsigned char uint8;
 

@@ -1,4 +1,4 @@
-#include <QtGui/QApplication>
+#include <QApplication>
 #include "AVInfo.hpp"
 #include "VideoPlayer.hpp"
 #include "debug.hpp"

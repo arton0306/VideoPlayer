@@ -1,6 +1,8 @@
 #include <cassert>
-#include <QtGui/QTextEdit>
-#include <QtGui/QMessageBox>
+//#include <QtGui/QTextEdit>
+//#include <QtGui/QMessageBox>
+#include <QTextEdit>
+#include <QMessageBox>
 #include <QDir>
 #include <QTime>
 #include "debug.hpp"
