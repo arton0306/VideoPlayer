@@ -2,9 +2,16 @@
 #include "stdio.h"
 #include <cassert>
 #include <cstring>
-#include "debug.hpp"
-
 #include "AudioPlayer.hpp"
+
+#ifdef AudioPlayerTest
+    #include <iostream>
+    using namespace std;
+    #define LOG cout
+#else
+    #include "debug.hpp"
+    #define LOG DEBUG()
+#endif
 
 /* static */ bool AudioPlayer::sIsInit = false;
 
@@ -28,7 +35,7 @@ AudioPlayer::AudioPlayer
 
     PaError err = paNoError;
 
-    DEBUG() << "aSampleFormat:" << aSampleFormat << ", mSampleFormat:" << mSampleFormat << endl;
+    LOG << "aSampleFormat:" << aSampleFormat << ", mSampleFormat:" << mSampleFormat << endl;
 
     err = Pa_OpenDefaultStream( &mPaStream,
                                 0,                              /* no input channels */
@@ -39,7 +46,7 @@ AudioPlayer::AudioPlayer
                                 AudioPlayer::callback,
                                 this );
     if (err != paNoError) {
-        DEBUG() << "Pa_OpenDefaultStream result:" << err << " (" << Pa_GetErrorText(err) << ")" << endl;
+        LOG << "Pa_OpenDefaultStream result:" << err << " (" << Pa_GetErrorText(err) << ")" << endl;
         assert(false);
     }
 
@@ -140,7 +147,7 @@ AudioPlayer::~AudioPlayer()
     {
         err = Pa_Initialize();
         if (err != paNoError) {
-            DEBUG() << "Pa_Initialize result:" << err << " (" << Pa_GetErrorText(err) << ")" << endl;
+            LOG << "Pa_Initialize result:" << err << " (" << Pa_GetErrorText(err) << ")" << endl;
             assert(false);
         }
         sIsInit = true;
