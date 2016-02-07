@@ -149,15 +149,10 @@ AVCodecContext * DecodeWorker::getCodecCtx( AVFormatContext * aFormatCtx, int aS
 {
     AVCodecContext * codecCtx = aFormatCtx->streams[aStreamIndex]->codec;
     AVCodec * codec = avcodec_find_decoder( codecCtx->codec_id );
-    if ( codec == NULL )
-    {
-        assert( false );
-    }
-
-    if ( avcodec_open2( codecCtx, codec, NULL ) < 0 )
-    {
-        assert( false );
-    }
+    assert(codec);
+    int err;
+    err = avcodec_open2( codecCtx, codec, NULL );
+    assert(err >= 0);
 
     return codecCtx;
 }
@@ -170,26 +165,27 @@ void DecodeWorker::decodeAudioVideo( QString aFileName )
     mIsDecoding = true;
     setFileName( aFileName );
 
-    av_register_all();
-
     int err;
 
+    av_register_all();
     AVFormatContext * formatCtx = NULL;
     err = avformat_open_input( &formatCtx, mFileName.toStdString().c_str(), NULL, NULL );
     assert(err == 0);
-
     err = avformat_find_stream_info( formatCtx, NULL );
     assert(err >= 0);
 
     int const videoStreamIndex = getStreamIndex( formatCtx, AVMEDIA_TYPE_VIDEO );
     int const audioStreamIndex = getStreamIndex( formatCtx, AVMEDIA_TYPE_AUDIO );
-
+    double videoTimeBase = av_q2d(formatCtx->streams[videoStreamIndex]->time_base);
+    double audioTimeBase = av_q2d(formatCtx->streams[audioStreamIndex]->time_base);
     AVCodecContext * videoCodecCtx = getCodecCtx( formatCtx, videoStreamIndex );
     AVCodecContext * audioCodecCtx = getCodecCtx( formatCtx, audioStreamIndex );
+    DEBUG() << "video time base:" << videoTimeBase;
+    DEBUG() << "audio time base:" << audioTimeBase;
 
     AVFrame *decodedFrame = av_frame_alloc();
     AVFrame *pFrameRGB = av_frame_alloc();
-    assert( decodedFrame != NULL && pFrameRGB != NULL );
+    assert( decodedFrame && pFrameRGB );
 
     uint8_t * buffer = (uint8_t *)av_malloc( av_image_get_buffer_size( AV_PIX_FMT_RGB24, videoCodecCtx->width, videoCodecCtx->height, 1 ) );
 
@@ -279,7 +275,7 @@ void DecodeWorker::decodeAudioVideo( QString aFileName )
 
             if ( frameFinished )
             {
-                double const dtsSec = packet.dts * av_q2d(formatCtx->streams[videoStreamIndex]->time_base );
+                double const dtsSec = packet.dts * videoTimeBase;
                 convertToRGBFrame( videoCodecCtx, decodedFrame, pFrameRGB );
                 vector<uint8> ppmFrame = convertToPpmFrame( pFrameRGB, videoCodecCtx->width, videoCodecCtx->height );
                 if ( mDoDumpAV )
@@ -297,7 +293,6 @@ void DecodeWorker::decodeAudioVideo( QString aFileName )
                         << "\t video frame ndx:" << videoFrameIndex
                         << "\t PTS:" << packet.pts
                         << "\t DTS:" << packet.dts
-                        << "\t TimeBase:" << av_q2d(formatCtx->streams[videoStreamIndex]->time_base)
                         << "\t *dts: " << dtsSec;
 
                 ++videoFrameIndex;
@@ -307,7 +302,6 @@ void DecodeWorker::decodeAudioVideo( QString aFileName )
                 DEBUG() << "p ndx:" << pktIndex << "    (unfinished video packet)";
             }
 
-            // Free the packet that was allocated by av_read_frame
             av_free_packet( &packet );
         }
         else if ( packet.stream_index == audioStreamIndex )
@@ -340,7 +334,7 @@ void DecodeWorker::decodeAudioVideo( QString aFileName )
                         }
 
                         if ( mAudioFifo.isEmpty() )
-                            mFirstAudioFrameTime = av_q2d(formatCtx->streams[audioStreamIndex]->time_base) * packet.pts;
+                            mFirstAudioFrameTime = audioTimeBase * packet.pts;
 
                         bool do_pitch_shift = true;
                         if (do_pitch_shift) {
@@ -354,8 +348,7 @@ void DecodeWorker::decodeAudioVideo( QString aFileName )
                                 << "\t audio frame ndx:" << audioFrameIndex
                                 << "\t PTS:" << packet.pts
                                 << "\t DTS:" << packet.dts
-                                << "\t TimeBase:" << av_q2d(formatCtx->streams[audioStreamIndex]->time_base)
-                                << "\t *dts:" << av_q2d(formatCtx->streams[audioStreamIndex]->time_base) * packet.pts;
+                                << "\t *dts:" << audioTimeBase * packet.pts;
 
                         ++audioFrameIndex;
                     }
