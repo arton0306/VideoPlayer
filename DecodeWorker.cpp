@@ -168,64 +168,40 @@ void DecodeWorker::decodeAudioVideo( QString aFileName )
     assert( mAudioFifo.getCount() == 0 );
 
     mIsDecoding = true;
-
-    /******************************************
-                    Codec Init
-    ******************************************/
-    // set file name
     setFileName( aFileName );
 
-    // Register all codec
     av_register_all();
-
-    // Declare a decode context
-    AVFormatContext * formatCtx = NULL;
 
     int err;
 
-    // readHeader
+    AVFormatContext * formatCtx = NULL;
     err = avformat_open_input( &formatCtx, mFileName.toStdString().c_str(), NULL, NULL );
-    assert(err==0);
+    assert(err == 0);
 
-    // Retrieve stream information
     err = avformat_find_stream_info( formatCtx, NULL );
-    assert( err >= 0);
+    assert(err >= 0);
 
-    // Get video/audio stream index
     int const videoStreamIndex = getStreamIndex( formatCtx, AVMEDIA_TYPE_VIDEO );
     int const audioStreamIndex = getStreamIndex( formatCtx, AVMEDIA_TYPE_AUDIO );
 
-    // Set video/audio decoder
     AVCodecContext * videoCodecCtx = getCodecCtx( formatCtx, videoStreamIndex );
     AVCodecContext * audioCodecCtx = getCodecCtx( formatCtx, audioStreamIndex );
 
-    /******************************************
-                Frame & Buffer Init
-    ******************************************/
-
-    // Declare frame
     AVFrame *decodedFrame = av_frame_alloc();
     AVFrame *pFrameRGB = av_frame_alloc();
     assert( decodedFrame != NULL && pFrameRGB != NULL );
 
-    // Create a buffer for converted frame
     uint8_t * buffer = (uint8_t *)av_malloc( av_image_get_buffer_size( AV_PIX_FMT_RGB24, videoCodecCtx->width, videoCodecCtx->height, 1 ) );
 
-    // Assign appropriate parts of buffer to image planes in pFrameRGB
-    // Note that pFrameRGB is an AVFrame, but AVFrame is a superset
-    // of AVPicture
     avpicture_fill( (AVPicture *)pFrameRGB, buffer, AV_PIX_FMT_RGB24,
         videoCodecCtx->width, videoCodecCtx->height );
 
-    /******************************************
-                Reading the Data
-    ******************************************/
     int frameFinished;
     AVPacket packet;
 
     int videoFrameIndex = 0;
     int audioFrameIndex = 0;
-    int packetIndex = 0;
+    int pktIndex = 0;
     double const fps = av_q2d( formatCtx->streams[videoStreamIndex]->avg_frame_rate );
     //DEBUG() << "video fps:" << fps;
     //DEBUG() << "videoStreamIndex:" << videoStreamIndex << "    audioStreamIndex:" << audioStreamIndex;
@@ -270,12 +246,13 @@ void DecodeWorker::decodeAudioVideo( QString aFileName )
         if ( mIsReceiveSeekSignal )
         {
             int ret = avformat_seek_file( formatCtx, -1, INT64_MIN, (double)mSeekMSec / 1000 * AV_TIME_BASE, INT64_MAX, 0);
-            DEBUG() << "============================================================ seek " << (double)mSeekMSec / 1000 << " return:" << ret;
+            DEBUG() << "seek " << (double)mSeekMSec / 1000
+                    << ", return:" << ret;
             if ( ret < 0 )
             {
                 seekState( false );
                 is_seek_or_new_play = false;
-                DEBUG() << "============================================================ seek fail";
+                DEBUG() << "seek failed";
             }
             else
             {
@@ -294,21 +271,12 @@ void DecodeWorker::decodeAudioVideo( QString aFileName )
             break;
         }
 
-        // the index is just for debug
-        ++packetIndex;
+        ++pktIndex;
 
-        // Is this packet from the video stream?
         if ( packet.stream_index == videoStreamIndex )
         {
-            // Decode video frame
             int const bytesUsed = avcodec_decode_video2( videoCodecCtx, decodedFrame, &frameFinished, &packet );
-            if ( bytesUsed != packet.size )
-            {
-                // check if one packet is corresponding to one frame
-                // DEBUG() << bytesUsed << " " << packet.size;
-            }
 
-            // Did we get a video frame?
             if ( frameFinished )
             {
                 double const dtsSec = packet.dts * av_q2d(formatCtx->streams[videoStreamIndex]->time_base );
@@ -317,26 +285,26 @@ void DecodeWorker::decodeAudioVideo( QString aFileName )
                 if ( mDoDumpAV )
                 {
                     QString dtsMsecString = QString("%1").arg(int(dtsSec*1000));
-                    QString ppmFileName = mFileName + "." + QString( 8 - dtsMsecString.size(), '0' ) + dtsMsecString + ".ppm";
-                    saveVideoPpmToFile( ppmFrame, ppmFileName.toStdString().c_str());
+                    QString ppmFileName = mFileName + "." +
+                                          QString( 8 - dtsMsecString.size(), '0' ) +
+                                          dtsMsecString + ".ppm";
+                    saveVideoPpmToFile(ppmFrame, ppmFileName.toStdString().c_str());
                 }
 
-                // fill in our ppm buffer
                 mVideoFifo.push( ppmFrame, dtsSec );
 
-                // Dump pts and dts for debug
-                DEBUG() << "p ndx:" << packetIndex
-                        << "    video frame ndx:" << videoFrameIndex
-                        << "     PTS:" << packet.pts
-                        << "     DTS:" << packet.dts
-                        << " TimeBase:" << av_q2d(formatCtx->streams[videoStreamIndex]->time_base)
-                        << " *dts: " << dtsSec;
+                DEBUG() << "p ndx:" << pktIndex
+                        << "\t video frame ndx:" << videoFrameIndex
+                        << "\t PTS:" << packet.pts
+                        << "\t DTS:" << packet.dts
+                        << "\t TimeBase:" << av_q2d(formatCtx->streams[videoStreamIndex]->time_base)
+                        << "\t *dts: " << dtsSec;
 
                 ++videoFrameIndex;
             }
             else
             {
-                DEBUG() << "p ndx:" << packetIndex << "    (unfinished video packet)";
+                DEBUG() << "p ndx:" << pktIndex << "    (unfinished video packet)";
             }
 
             // Free the packet that was allocated by av_read_frame
@@ -362,15 +330,12 @@ void DecodeWorker::decodeAudioVideo( QString aFileName )
                             decodedFrame->nb_samples,
                             audioCodecCtx->sample_fmt, 1);
 
-                        // apply audio effect and push audio data to fifo
-                        // notice that we don't push meaningful time value with the stream into the fifo
                         vector<uint8> decodedStream( data_size, 0 );
                         interleave(decodedFrame->data, &decodedStream[0],
                             audioCodecCtx->channels, audioCodecCtx->sample_fmt, data_size);
                         setAudioEffect( audioCodecCtx->channels );
 
                         if ( mDoDumpAV ) {
-                             // this will spend lots time, which will cause the delay in video
                             appendAudioPcmToFile( &decodedStream[0], data_size, (mFileName + ".pcm").toStdString().c_str() );
                         }
 
@@ -382,21 +347,21 @@ void DecodeWorker::decodeAudioVideo( QString aFileName )
                             decodedStream = mAudioTuner.process( decodedStream );
                         }
                         if ( decodedStream.size() != 0 ) {
-                            mAudioFifo.push( decodedStream, 0.0 ); // the audio time frame is dummy
+                            mAudioFifo.push( decodedStream, 0.0 /* dummy */ );
                         }
 
-                        DEBUG() << "p ndx:" << packetIndex
-                                << "     audio frame ndx:" << audioFrameIndex
-                                << "     PTS:" << packet.pts
-                                << "     DTS:" << packet.dts
-                                << " TimeBase:" << av_q2d(formatCtx->streams[audioStreamIndex]->time_base)
-                                << " *dts:" << av_q2d(formatCtx->streams[audioStreamIndex]->time_base) * packet.pts;
+                        DEBUG() << "p ndx:" << pktIndex
+                                << "\t audio frame ndx:" << audioFrameIndex
+                                << "\t PTS:" << packet.pts
+                                << "\t DTS:" << packet.dts
+                                << "\t TimeBase:" << av_q2d(formatCtx->streams[audioStreamIndex]->time_base)
+                                << "\t *dts:" << av_q2d(formatCtx->streams[audioStreamIndex]->time_base) * packet.pts;
 
                         ++audioFrameIndex;
                     }
                     else
                     {
-                        DEBUG() << "p ndx:" << packetIndex << "    (unfinished audio packet)";
+                        DEBUG() << "p ndx:" << pktIndex << "    (unfinished audio packet)";
                     }
                     packet.data += bytesUsed;
                     packet.size -= bytesUsed;
@@ -410,9 +375,7 @@ void DecodeWorker::decodeAudioVideo( QString aFileName )
         }
         else
         {
-            // Free the packet that was allocated by av_read_frame
             av_free_packet( &packet );
-            // DEBUG() << "p ndx:" << packetIndex << "     packet.stream_index:" << packet.stream_index;
         }
 
         // determine whether decoded frame is enough and determine whether interrupt signal received
@@ -425,38 +388,23 @@ void DecodeWorker::decodeAudioVideo( QString aFileName )
             }
             Sleep::msleep( 1 );
         }
-
     }
 
-    // av reach to the end
     mIsDecoding = false;
     decodeDone();
 
-    /******************************************
-                Release the Resource
-    ******************************************/
-
-    // Free the RGB image
     av_free( buffer );
     av_free( pFrameRGB );
-
-    // Free the YUV frame
     av_free( decodedFrame );
-
-    // Close the codec
     avcodec_close( videoCodecCtx );
     avcodec_close( audioCodecCtx );
-
-    // Close format context
     avformat_close_input( &formatCtx );
 }
 
 void DecodeWorker::convertToRGBFrame( AVCodecContext * videoCodecCtx, AVFrame * decodedFrame, AVFrame * pFrameRGB )
 {
-    // Declare SwsContext
     struct SwsContext *pConvertedSwsCtx = NULL;
 
-    // Convert the image from its native format to RGB
     pConvertedSwsCtx = sws_getContext(
         videoCodecCtx->width, videoCodecCtx->height, videoCodecCtx->pix_fmt,
         videoCodecCtx->width, videoCodecCtx->height, AV_PIX_FMT_RGB24,
@@ -467,11 +415,9 @@ void DecodeWorker::convertToRGBFrame( AVCodecContext * videoCodecCtx, AVFrame * 
         0, videoCodecCtx->height,
         pFrameRGB->data, pFrameRGB->linesize );
 
-    // Release SwsContext
     sws_freeContext( pConvertedSwsCtx );
 }
 
-// this will spend lots time, which will cause the delay in video
 void DecodeWorker::appendAudioPcmToFile( void const * aPcmBuffer, int aPcmSize, char const * aFileName )
 {
     FILE * outfile = fopen( aFileName, "ab" );
