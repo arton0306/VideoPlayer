@@ -36,7 +36,7 @@ DecodeWorker::DecodeWorker(QObject *parent)
     , mIsReceiveSeekSignal( false )
     , mSeekMSec( 0 )
     , mIsDecoding( false )
-    , isAvDumpNeeded( false )
+    , mDoDumpAV( false )
     , mIsSpeechMode( false )
     , mSemiTonesDelta( 0 )
 {
@@ -112,7 +112,7 @@ void DecodeWorker::seek( int aMSec )
 
 void DecodeWorker::dumpAVStream()
 {
-    isAvDumpNeeded = true;
+    mDoDumpAV = true;
 }
 
 // can be called by player thread
@@ -120,8 +120,7 @@ void DecodeWorker::dumpAVStream()
 // if the flag is true, it clear all av buffer and break out of the decoding loop.
 void DecodeWorker::stopDecoding()
 {
-    if ( mIsDecoding )
-    {
+    if ( mIsDecoding ) {
         mIsReceiveStopSignal = true;
     }
 }
@@ -136,39 +135,11 @@ void DecodeWorker::setFileName( QString aFileName )
     mFileName = aFileName;
 }
 
-int DecodeWorker::readHeader( AVFormatContext ** aFormatCtx )
-{
-    if ( avformat_open_input( aFormatCtx, mFileName.toStdString().c_str(), NULL, NULL ) != 0 )
-    {
-        assert( false );
-        return -1;
-    }
-    else
-    {
-        return 1;
-    }
-}
-
-int DecodeWorker::retrieveStreamInfo( AVFormatContext * aFormatCtx )
-{
-    if ( avformat_find_stream_info( aFormatCtx, NULL ) < 0 )
-    {
-        assert( false );
-        return -1;
-    }
-    else
-    {
-        return 1;
-    }
-}
-
 int DecodeWorker::getStreamIndex( AVFormatContext * aFormatCtx, AVMediaType aMediaType )
 {
-    for ( unsigned streamIndex = 0; streamIndex < aFormatCtx->nb_streams; ++streamIndex )
-    {
-        if ( aFormatCtx->streams[streamIndex]->codec->codec_type == aMediaType )
-        {
-            return streamIndex;
+    for ( unsigned i = 0; i < aFormatCtx->nb_streams; ++i ) {
+        if ( aFormatCtx->streams[i]->codec->codec_type == aMediaType ) {
+            return i;
         }
     }
     return -1;
@@ -210,11 +181,15 @@ void DecodeWorker::decodeAudioVideo( QString aFileName )
     // Declare a decode context
     AVFormatContext * formatCtx = NULL;
 
+    int err;
+
     // readHeader
-    readHeader( &formatCtx );
+    err = avformat_open_input( &formatCtx, mFileName.toStdString().c_str(), NULL, NULL );
+    assert(err==0);
 
     // Retrieve stream information
-    retrieveStreamInfo( formatCtx );
+    err = avformat_find_stream_info( formatCtx, NULL );
+    assert( err >= 0);
 
     // Get video/audio stream index
     int const videoStreamIndex = getStreamIndex( formatCtx, AVMEDIA_TYPE_VIDEO );
@@ -274,7 +249,7 @@ void DecodeWorker::decodeAudioVideo( QString aFileName )
         audioCodecCtx->sample_rate,
         av_get_bytes_per_sample( audioCodecCtx->sample_fmt ) * BITS_PER_BYTES
         );
-    if ( isAvDumpNeeded ) saveAVInfoToFile( avInfo, (mFileName + ".avinfo.txt").toStdString().c_str());
+    if ( mDoDumpAV ) saveAVInfoToFile( avInfo, (mFileName + ".avinfo.txt").toStdString().c_str());
     readyToDecode( avInfo );
 
     bool is_seek_or_new_play = true;
@@ -313,7 +288,6 @@ void DecodeWorker::decodeAudioVideo( QString aFileName )
             mIsReceiveSeekSignal = false;
         }
 
-        // read a frame
         if ( av_read_frame( formatCtx, &packet ) < 0 || stop_flag )
         {
             // there may some audio samples in soundtouch internal buffer, but we ignore them
@@ -340,7 +314,7 @@ void DecodeWorker::decodeAudioVideo( QString aFileName )
                 double const dtsSec = packet.dts * av_q2d(formatCtx->streams[videoStreamIndex]->time_base );
                 convertToRGBFrame( videoCodecCtx, decodedFrame, pFrameRGB );
                 vector<uint8> ppmFrame = convertToPpmFrame( pFrameRGB, videoCodecCtx->width, videoCodecCtx->height );
-                if ( isAvDumpNeeded )
+                if ( mDoDumpAV )
                 {
                     QString dtsMsecString = QString("%1").arg(int(dtsSec*1000));
                     QString ppmFileName = mFileName + "." + QString( 8 - dtsMsecString.size(), '0' ) + dtsMsecString + ".ppm";
@@ -351,7 +325,13 @@ void DecodeWorker::decodeAudioVideo( QString aFileName )
                 mVideoFifo.push( ppmFrame, dtsSec );
 
                 // Dump pts and dts for debug
-                DEBUG() << "p ndx:" << packetIndex << "    video frame ndx:" << videoFrameIndex << "     PTS:" << packet.pts << "     DTS:" << packet.dts << " TimeBase:" << av_q2d(formatCtx->streams[videoStreamIndex]->time_base) << " *dts: " << dtsSec;
+                DEBUG() << "p ndx:" << packetIndex
+                        << "    video frame ndx:" << videoFrameIndex
+                        << "     PTS:" << packet.pts
+                        << "     DTS:" << packet.dts
+                        << " TimeBase:" << av_q2d(formatCtx->streams[videoStreamIndex]->time_base)
+                        << " *dts: " << dtsSec;
+
                 ++videoFrameIndex;
             }
             else
@@ -389,7 +369,7 @@ void DecodeWorker::decodeAudioVideo( QString aFileName )
                             audioCodecCtx->channels, audioCodecCtx->sample_fmt, data_size);
                         setAudioEffect( audioCodecCtx->channels );
 
-                        if ( isAvDumpNeeded ) {
+                        if ( mDoDumpAV ) {
                              // this will spend lots time, which will cause the delay in video
                             appendAudioPcmToFile( &decodedStream[0], data_size, (mFileName + ".pcm").toStdString().c_str() );
                         }
@@ -405,7 +385,13 @@ void DecodeWorker::decodeAudioVideo( QString aFileName )
                             mAudioFifo.push( decodedStream, 0.0 ); // the audio time frame is dummy
                         }
 
-                        DEBUG() << "p ndx:" << packetIndex << "     audio frame ndx:" << audioFrameIndex << "     PTS:" << packet.pts << "     DTS:" << packet.dts << " TimeBase:" << av_q2d(formatCtx->streams[audioStreamIndex]->time_base) << " *dts:" << av_q2d(formatCtx->streams[audioStreamIndex]->time_base) * packet.pts;
+                        DEBUG() << "p ndx:" << packetIndex
+                                << "     audio frame ndx:" << audioFrameIndex
+                                << "     PTS:" << packet.pts
+                                << "     DTS:" << packet.dts
+                                << " TimeBase:" << av_q2d(formatCtx->streams[audioStreamIndex]->time_base)
+                                << " *dts:" << av_q2d(formatCtx->streams[audioStreamIndex]->time_base) * packet.pts;
+
                         ++audioFrameIndex;
                     }
                     else

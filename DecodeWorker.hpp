@@ -78,7 +78,7 @@ private:
     bool mIsReceiveSeekSignal;
     int mSeekMSec;             // other thread will set mIsReceiveSeekSignal and mSeekTime to notice libav thread
     bool mIsDecoding;
-    bool isAvDumpNeeded;
+    bool mDoDumpAV;
 
     // audio tuner ( sound touch )
     void setAudioEffect( int aChannel );
