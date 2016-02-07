@@ -3,14 +3,14 @@
 #include <cassert>
 #include "MultimediaWidget.hpp"
 #include "debug.hpp"
-#include "LibavWorker.hpp"
+#include "DecodeWorker.hpp"
 #include "QGLCanvas.hpp"
 
 using namespace std;
 
 MultimediaWidget::MultimediaWidget(QWidget *parent)
     : QWidget(parent)
-    , mLibavWorker( new LibavWorker )
+    , mLibavWorker( new DecodeWorker )
     , mVideoCanvas( NULL )
     , mVolumnTuner( NULL )
     , mAudioPlayer( NULL )

@@ -5,7 +5,7 @@
 extern "C" {
     #include <libavutil/imgutils.h>
 }
-#include "LibavWorker.hpp"
+#include "DecodeWorker.hpp"
 #include "QtSleepHacker.hpp"
 #include "debug.hpp"
 #include "Sleep.hpp"
@@ -29,7 +29,7 @@ static void interleave(uint8_t **data, uint8_t *outbuf, int channels,
     }
 }
 
-LibavWorker::LibavWorker(QObject *parent)
+DecodeWorker::DecodeWorker(QObject *parent)
     : QObject(parent)
     , mFirstAudioFrameTime( 0.0 )
     , mIsReceiveStopSignal( false )
@@ -42,7 +42,7 @@ LibavWorker::LibavWorker(QObject *parent)
 {
 }
 
-vector<uint8> LibavWorker::convertToPpmFrame( AVFrame *aDecodedFrame, int width, int height )
+vector<uint8> DecodeWorker::convertToPpmFrame( AVFrame *aDecodedFrame, int width, int height )
 {
     // Write ppm header to a temp buffer
     char ppmHeader[30];
@@ -60,7 +60,7 @@ vector<uint8> LibavWorker::convertToPpmFrame( AVFrame *aDecodedFrame, int width,
 }
 
 // can be called by player thread
-vector<uint8> LibavWorker::popAllAudioStream()
+vector<uint8> DecodeWorker::popAllAudioStream()
 {
     int frameCount = mAudioFifo.getCount();
 
@@ -75,7 +75,7 @@ vector<uint8> LibavWorker::popAllAudioStream()
 }
 
 // can be called by player thread
-vector<uint8> LibavWorker::popNextVideoFrame()
+vector<uint8> DecodeWorker::popNextVideoFrame()
 {
     if ( mVideoFifo.getCount() > 0 )
     {
@@ -89,13 +89,13 @@ vector<uint8> LibavWorker::popNextVideoFrame()
 }
 
 // can be called by player thread
-double LibavWorker::getNextVideoFrameSecond() const
+double DecodeWorker::getNextVideoFrameSecond() const
 {
     return mVideoFifo.getFrontFrameSecond();
 }
 
 // can be called by player thread
-void LibavWorker::dropNextVideoFrame()
+void DecodeWorker::dropNextVideoFrame()
 {
     if ( mVideoFifo.getCount() > 0 )
     {
@@ -104,13 +104,13 @@ void LibavWorker::dropNextVideoFrame()
 }
 
 // can be called by other thread
-void LibavWorker::seek( int aMSec )
+void DecodeWorker::seek( int aMSec )
 {
     mSeekMSec = aMSec;
     mIsReceiveSeekSignal = true;
 }
 
-void LibavWorker::dumpAVStream()
+void DecodeWorker::dumpAVStream()
 {
     isAvDumpNeeded = true;
 }
@@ -118,7 +118,7 @@ void LibavWorker::dumpAVStream()
 // can be called by player thread
 // decode thread will check mIsReceiveStopSignal in each decoding round,
 // if the flag is true, it clear all av buffer and break out of the decoding loop.
-void LibavWorker::stopDecoding()
+void DecodeWorker::stopDecoding()
 {
     if ( mIsDecoding )
     {
@@ -128,15 +128,15 @@ void LibavWorker::stopDecoding()
 
 // can be called by player thread
 // audio effect
-void LibavWorker::setSpeechMode( bool aIsSpeechMode ) { mIsSpeechMode = aIsSpeechMode; }
-void LibavWorker::setPitchSemiTones( int aDelta /* -60 ~ +60 */ ) { mSemiTonesDelta = aDelta; }
+void DecodeWorker::setSpeechMode( bool aIsSpeechMode ) { mIsSpeechMode = aIsSpeechMode; }
+void DecodeWorker::setPitchSemiTones( int aDelta /* -60 ~ +60 */ ) { mSemiTonesDelta = aDelta; }
 
-void LibavWorker::setFileName( QString aFileName )
+void DecodeWorker::setFileName( QString aFileName )
 {
     mFileName = aFileName;
 }
 
-int LibavWorker::readHeader( AVFormatContext ** aFormatCtx )
+int DecodeWorker::readHeader( AVFormatContext ** aFormatCtx )
 {
     if ( avformat_open_input( aFormatCtx, mFileName.toStdString().c_str(), NULL, NULL ) != 0 )
     {
@@ -149,7 +149,7 @@ int LibavWorker::readHeader( AVFormatContext ** aFormatCtx )
     }
 }
 
-int LibavWorker::retrieveStreamInfo( AVFormatContext * aFormatCtx )
+int DecodeWorker::retrieveStreamInfo( AVFormatContext * aFormatCtx )
 {
     if ( avformat_find_stream_info( aFormatCtx, NULL ) < 0 )
     {
@@ -162,7 +162,7 @@ int LibavWorker::retrieveStreamInfo( AVFormatContext * aFormatCtx )
     }
 }
 
-int LibavWorker::getStreamIndex( AVFormatContext * aFormatCtx, AVMediaType aMediaType )
+int DecodeWorker::getStreamIndex( AVFormatContext * aFormatCtx, AVMediaType aMediaType )
 {
     for ( unsigned streamIndex = 0; streamIndex < aFormatCtx->nb_streams; ++streamIndex )
     {
@@ -174,7 +174,7 @@ int LibavWorker::getStreamIndex( AVFormatContext * aFormatCtx, AVMediaType aMedi
     return -1;
 }
 
-AVCodecContext * LibavWorker::getCodecCtx( AVFormatContext * aFormatCtx, int aStreamIndex )
+AVCodecContext * DecodeWorker::getCodecCtx( AVFormatContext * aFormatCtx, int aStreamIndex )
 {
     AVCodecContext * codecCtx = aFormatCtx->streams[aStreamIndex]->codec;
     AVCodec * codec = avcodec_find_decoder( codecCtx->codec_id );
@@ -191,7 +191,7 @@ AVCodecContext * LibavWorker::getCodecCtx( AVFormatContext * aFormatCtx, int aSt
     return codecCtx;
 }
 
-void LibavWorker::decodeAudioVideo( QString aFileName )
+void DecodeWorker::decodeAudioVideo( QString aFileName )
 {
     assert( mVideoFifo.getCount() == 0 );
     assert( mAudioFifo.getCount() == 0 );
@@ -465,7 +465,7 @@ void LibavWorker::decodeAudioVideo( QString aFileName )
     avformat_close_input( &formatCtx );
 }
 
-void LibavWorker::convertToRGBFrame( AVCodecContext * videoCodecCtx, AVFrame * decodedFrame, AVFrame * pFrameRGB )
+void DecodeWorker::convertToRGBFrame( AVCodecContext * videoCodecCtx, AVFrame * decodedFrame, AVFrame * pFrameRGB )
 {
     // Declare SwsContext
     struct SwsContext *pConvertedSwsCtx = NULL;
@@ -486,7 +486,7 @@ void LibavWorker::convertToRGBFrame( AVCodecContext * videoCodecCtx, AVFrame * d
 }
 
 // this will spend lots time, which will cause the delay in video
-void LibavWorker::appendAudioPcmToFile( void const * aPcmBuffer, int aPcmSize, char const * aFileName )
+void DecodeWorker::appendAudioPcmToFile( void const * aPcmBuffer, int aPcmSize, char const * aFileName )
 {
     FILE * outfile = fopen( aFileName, "ab" );
     assert( outfile );
@@ -494,7 +494,7 @@ void LibavWorker::appendAudioPcmToFile( void const * aPcmBuffer, int aPcmSize, c
     fclose( outfile );
 }
 
-void LibavWorker::saveVideoPpmToFile( vector<uint8> aPpmFrame, char const * aFileName )
+void DecodeWorker::saveVideoPpmToFile( vector<uint8> aPpmFrame, char const * aFileName )
 {
     FILE * outfile = fopen( aFileName, "wb" );
     assert( outfile );
@@ -502,7 +502,7 @@ void LibavWorker::saveVideoPpmToFile( vector<uint8> aPpmFrame, char const * aFil
     fclose( outfile );
 }
 
-void LibavWorker::saveAVInfoToFile( AVInfo const & aAVInfo, char const * aFileName )
+void DecodeWorker::saveAVInfoToFile( AVInfo const & aAVInfo, char const * aFileName )
 {
     fstream fp;
     fp.open( aFileName, ios::out );
@@ -515,7 +515,7 @@ void LibavWorker::saveAVInfoToFile( AVInfo const & aAVInfo, char const * aFileNa
     fp.close();
 }
 
-bool LibavWorker::isAvFrameEnough( double a_fps ) const
+bool DecodeWorker::isAvFrameEnough( double a_fps ) const
 {
     // video: at least 2 frames
     // audio: 16KB data, in 48000Hz, 2ch, int13, can play 0.085 second
@@ -533,13 +533,13 @@ bool LibavWorker::isAvFrameEnough( double a_fps ) const
 
 }
 
-void LibavWorker::init()
+void DecodeWorker::init()
 {
     mVideoFifo.clear();
     mAudioFifo.clear();
 }
 
-void LibavWorker::setAudioEffect( int aChannel )
+void DecodeWorker::setAudioEffect( int aChannel )
 {
     mAudioTuner.setSpeechMode( mIsSpeechMode );
     mAudioTuner.setPitchSemiTones( mSemiTonesDelta );

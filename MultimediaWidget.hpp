@@ -8,7 +8,7 @@
 #include <QTimer>
 #include <QTime>
 #include <QString>
-#include "LibavWorker.hpp"
+#include "DecodeWorker.hpp"
 #include "ui_MultimediaWidget.h"
 #include "AVInfo.hpp"
 #include "FrameFifo.hpp"
@@ -49,7 +49,7 @@ private:
     int pushAudioStream( std::vector<uint8> const & stream ) const;
 
     // the decoded thread
-    LibavWorker * mLibavWorker;
+    DecodeWorker * mLibavWorker;
 
     // the widget to play video
     QGLCanvas * mVideoCanvas;

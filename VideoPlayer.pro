@@ -14,7 +14,6 @@ TEMPLATE = app
 SOURCES += \
     main.cpp\
     VideoPlayer.cpp \
-    LibavWorker.cpp \
     QGLCanvas.cpp \
     debug.cpp \
     WavOutFile.cpp \
@@ -31,10 +30,10 @@ SOURCES += \
     # tools/videoinfodumper/libav_probe.c \
     # tools/wavheader/MakeWavHeader.cpp \
     # libav_using.c
+    DecodeWorker.cpp
 
 HEADERS += \
     VideoPlayer.hpp \
-    LibavWorker.hpp \
     QGLCanvas.hpp \
     QtSleepHacker.hpp \
     debug.hpp \
@@ -149,6 +148,7 @@ HEADERS += \
     3rdparty/soundtouch/include/SoundTouch.h \
     3rdparty/soundtouch/include/soundtouch_config.h \
     3rdparty/soundtouch/include/STTypes.h \
+    DecodeWorker.hpp
 
 # AudioPlayer
 SOURCES += \

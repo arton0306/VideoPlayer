@@ -1,5 +1,5 @@
-#ifndef LIBAV_WORKER_HPP
-#define LIBAV_WORKER_HPP
+#ifndef DECODE_WORKER_HPP
+#define DECODE_WORKER_HPP
 
 #include <vector>
 #include <QObject>
@@ -13,7 +13,7 @@ extern "C"{
 #include "AVInfo.hpp"
 #include "AudioTuner.hpp"
 
-class LibavWorker : public QObject
+class DecodeWorker : public QObject
 {
     Q_OBJECT
 public:
@@ -23,7 +23,7 @@ public:
         SEEK_FAIL
     };
 
-    explicit LibavWorker(QObject *parent = 0);
+    explicit DecodeWorker(QObject *parent = 0);
 
 public:
     // for other thread
@@ -88,4 +88,4 @@ private:
     int mSemiTonesDelta;
 };
 
-#endif // LIBAV_WORKER_HPP
+#endif // DECODE_WORKER_HPP
