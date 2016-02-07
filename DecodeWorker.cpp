@@ -1,6 +1,8 @@
 #include <cassert>
+#include <cstdio>
 #include <algorithm>
 #include <fstream>
+#include <string>
 #include <QThread>
 extern "C" {
     #include <libavutil/imgutils.h>
@@ -42,7 +44,7 @@ DecodeWorker::DecodeWorker(QObject *parent)
 {
 }
 
-vector<uint8> DecodeWorker::convertToPpmFrame( AVFrame *aDecodedFrame, int width, int height )
+vector<uint8> DecodeWorker::genFramePPM( AVFrame *aDecodedFrame, int width, int height )
 {
     // Write ppm header to a temp buffer
     char ppmHeader[30];
@@ -204,7 +206,6 @@ void DecodeWorker::decodeAudioVideo( QString aFileName )
 
     audioCodecCtx->sample_fmt;
     DEBUG() << audioCodecCtx->sample_fmt << endl;
-    // assert(false);
 
     mAudioTuner.init(
         audioCodecCtx->channels,
@@ -241,9 +242,10 @@ void DecodeWorker::decodeAudioVideo( QString aFileName )
         // determine whether seek or not
         if ( mIsReceiveSeekSignal )
         {
-            int ret = avformat_seek_file( formatCtx, -1, INT64_MIN, (double)mSeekMSec / 1000 * AV_TIME_BASE, INT64_MAX, 0);
+            int ret = avformat_seek_file( formatCtx, -1,
+                    INT64_MIN, (double)mSeekMSec / 1000 * AV_TIME_BASE, INT64_MAX, 0);
             DEBUG() << "seek " << (double)mSeekMSec / 1000
-                    << ", return:" << ret;
+                    << ", result:" << ret;
             if ( ret < 0 )
             {
                 seekState( false );
@@ -277,14 +279,10 @@ void DecodeWorker::decodeAudioVideo( QString aFileName )
             {
                 double const dtsSec = packet.dts * videoTimeBase;
                 convertToRGBFrame( videoCodecCtx, decodedFrame, pFrameRGB );
-                vector<uint8> ppmFrame = convertToPpmFrame( pFrameRGB, videoCodecCtx->width, videoCodecCtx->height );
-                if ( mDoDumpAV )
-                {
-                    QString dtsMsecString = QString("%1").arg(int(dtsSec*1000));
-                    QString ppmFileName = mFileName + "." +
-                                          QString( 8 - dtsMsecString.size(), '0' ) +
-                                          dtsMsecString + ".ppm";
-                    saveVideoPpmToFile(ppmFrame, ppmFileName.toStdString().c_str());
+                vector<uint8> ppmFrame =
+                    genFramePPM( pFrameRGB, videoCodecCtx->width, videoCodecCtx->height );
+                if ( mDoDumpAV ) {
+                    genFilePPM(&ppmFrame[0], ppmFrame.size(), dtsSec);
                 }
 
                 mVideoFifo.push( ppmFrame, dtsSec );
@@ -419,11 +417,15 @@ void DecodeWorker::appendAudioPcmToFile( void const * aPcmBuffer, int aPcmSize, 
     fclose( outfile );
 }
 
-void DecodeWorker::saveVideoPpmToFile( vector<uint8> aPpmFrame, char const * aFileName )
+void DecodeWorker::genFilePPM(uint8_t *buf, int len, double dtsSec)
 {
-    FILE * outfile = fopen( aFileName, "wb" );
+    char ts[12];
+    snprintf(ts, 12, "%08d", int(dtsSec*1000));
+    string filename = mFileName.toStdString() + "." + ts + ".ppm";
+
+    FILE * outfile = fopen( filename.c_str(), "wb" );
     assert( outfile );
-    fwrite( &aPpmFrame[0], 1, aPpmFrame.size(), outfile );
+    fwrite( buf, 1, len, outfile );
     fclose( outfile );
 }
 
@@ -443,18 +445,12 @@ void DecodeWorker::saveAVInfoToFile( AVInfo const & aAVInfo, char const * aFileN
 bool DecodeWorker::isAvFrameEnough( double a_fps ) const
 {
     // video: at least 2 frames
-    // audio: 16KB data, in 48000Hz, 2ch, int13, can play 0.085 second
+    // audio: 16KB data, in 48000Hz, 2ch, s16, can play 0.085 second
     // this condition will consume lots mem because we'll read many video frame in order to get audio frames
     // this change due to soundtouch output stream at one go, and portaudio's callback need data ASAP
 
-    if ( ( mVideoFifo.getCount() > 1 ) &&
-         ( mAudioFifo.getBytes() > 16 * 1024 ) )
-    {
-        return true;
-    }
-    return false;
-
-    // return ( mVideoFifo.getCount() > 1 ) && ( mAudioFifo.getCount() > 1 );
+    return mVideoFifo.getCount()>1 && mAudioFifo.getBytes()>16*1024;
+    // return mVideoFifo.getCount()>1 && mAudioFifo.getCount()>1;
 
 }
 

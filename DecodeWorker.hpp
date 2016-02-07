@@ -54,14 +54,14 @@ public slots:
 
 private:
     void init();
-    std::vector<uint8> convertToPpmFrame( AVFrame *aDecodedFrame, int width, int height );
+    std::vector<uint8> genFramePPM( AVFrame *aDecodedFrame, int width, int height );
     void setFileName( QString aFileName );
     bool isAvFrameEnough( double a_fps ) const;
 
     // debug info
     void saveAVInfoToFile( AVInfo const & aAVInfo, char const * aFileName );
     void appendAudioPcmToFile( void const * aPcmBuffer, int aPcmSize, char const * aFileName );
-    void saveVideoPpmToFile( std::vector<uint8> ppmFrame, char const * aFileName );
+    void genFilePPM(uint8_t *buf, int len, double dtsSec);
 
     // libav
     int readHeader( AVFormatContext ** aFormatCtx );
