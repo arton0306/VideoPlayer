@@ -60,7 +60,7 @@ private:
 
     // debug info
     void saveAVInfoToFile( AVInfo const & aAVInfo, char const * aFileName );
-    void appendAudioPcmToFile( void const * aPcmBuffer, int aPcmSize, char const * aFileName );
+    void appendFilePCM( void const * buf, int len, char const * filename );
     void genFilePPM(uint8_t *buf, int len, double dtsSec);
 
     // libav

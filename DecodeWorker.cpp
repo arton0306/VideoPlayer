@@ -46,11 +46,8 @@ DecodeWorker::DecodeWorker(QObject *parent)
 
 vector<uint8> DecodeWorker::genFramePPM( AVFrame *aDecodedFrame, int width, int height )
 {
-    // Write ppm header to a temp buffer
     char ppmHeader[30];
     int const headerSize = sprintf( ppmHeader, "P6\n%d %d\n255\n", width, height );
-
-    // Write ppm totally
     int const contentSize = height * width * 3; // =aDecodedFrame->linesize[0]
     int const ppmSize = headerSize + contentSize;
     assert( ppmSize != 0 );
@@ -222,11 +219,13 @@ void DecodeWorker::decodeAudioVideo( QString aFileName )
         audioCodecCtx->sample_rate,
         av_get_bytes_per_sample( audioCodecCtx->sample_fmt ) * BITS_PER_BYTES
         );
-    if ( mDoDumpAV ) saveAVInfoToFile( avInfo, (mFileName + ".avinfo.txt").toStdString().c_str());
+    if ( mDoDumpAV ) {
+        saveAVInfoToFile( avInfo, (mFileName + ".avinfo.txt").toStdString().c_str());
+    }
+    char const *pcmFileName = (mFileName + ".pcm").toStdString().c_str();
+
     readyToDecode( avInfo );
-
     bool is_seek_or_new_play = true;
-
     while ( true )
     {
         bool stop_flag = false;
@@ -328,7 +327,7 @@ void DecodeWorker::decodeAudioVideo( QString aFileName )
                         setAudioEffect( audioCodecCtx->channels );
 
                         if ( mDoDumpAV ) {
-                            appendAudioPcmToFile( &decodedStream[0], data_size, (mFileName + ".pcm").toStdString().c_str() );
+                            appendFilePCM( &decodedStream[0], data_size, pcmFileName );
                         }
 
                         if ( mAudioFifo.isEmpty() )
@@ -409,11 +408,11 @@ void DecodeWorker::convertToRGBFrame( AVCodecContext * videoCodecCtx, AVFrame * 
     sws_freeContext( pConvertedSwsCtx );
 }
 
-void DecodeWorker::appendAudioPcmToFile( void const * aPcmBuffer, int aPcmSize, char const * aFileName )
+void DecodeWorker::appendFilePCM( void const * buf, int len, char const * filename )
 {
-    FILE * outfile = fopen( aFileName, "ab" );
+    FILE * outfile = fopen( filename, "ab" );
     assert( outfile );
-    fwrite( aPcmBuffer, 1, aPcmSize, outfile );
+    fwrite( buf, 1, len, outfile );
     fclose( outfile );
 }
 
