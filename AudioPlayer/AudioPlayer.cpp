@@ -59,7 +59,6 @@ void AudioPlayer::resetBufferInfo()
     // fillDefaultSample();
     mStart = 0;
     mEnd = 0;
-    mPlayByteCount = 0;
     mWriteByteCount = 0;
     mFramesWriteToBufferInCallback = 0;
     mConsumedBytes = 0;
@@ -221,7 +220,7 @@ double AudioPlayer::getPlaySec() const
     for( int i = 0; i < framesPerBuffer; ++i )
     {
         int const frameByteCount = ctx->mChannel * sampleBytes;
-        if ( ctx->mWriteByteCount >= ctx->mPlayByteCount + frameByteCount )
+        if ( ctx->mWriteByteCount >= ctx->mConsumedBytes + frameByteCount )
         {
             for ( int j = 0; j < frameByteCount; ++j )
             {
@@ -229,7 +228,6 @@ double AudioPlayer::getPlaySec() const
                 *out++ = b;
                 ctx->mStart = ctx->getNextIndex( ctx->mStart );
                 ctx->mConsumedBytes += 1;
-                ctx->mPlayByteCount += 1;
             }
             ctx->mFramesWriteToBufferInCallback += 1;
         }

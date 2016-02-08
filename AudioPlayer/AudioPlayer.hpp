@@ -71,7 +71,6 @@ private:
     int mBufferSize;      // audio buffer size
     int mStart;           // the callback will read from the index in audio buffer
     int mEnd;             // the index where the users push from, the element on this index is always empty
-    volatile long long mPlayByteCount;
     volatile long long mWriteByteCount;
     unsigned long mFramesWriteToBufferInCallback;
     int mConsumedBytes;   // we use this to estimate the playing time
