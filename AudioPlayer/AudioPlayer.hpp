@@ -67,14 +67,14 @@ private:
 
     // TODO: check volatile is needed or not
     // audio buffer data
-    char * mStreamBuffer;
-    int mBufferSize;
-    int mStart; // the callback will read from this index
-    int mEnd;   // the index where the users push from, the element on this index is always empty
+    char * mStreamBuffer; // audio buffer
+    int mBufferSize;      // audio buffer size
+    int mStart;           // the callback will read from the index in audio buffer
+    int mEnd;             // the index where the users push from, the element on this index is always empty
     volatile long long mPlayByteCount;
     volatile long long mWriteByteCount;
     unsigned long mFramesWriteToBufferInCallback;
-    double mConsumedBytes; // we use this to estimate the playing time
+    int mConsumedBytes;   // we use this to estimate the playing time
 
     // port audio data
     PaStream * mPaStream;

@@ -196,7 +196,7 @@ double AudioPlayer::getPlaySec() const
     double const deviceLatency = Pa_GetStreamInfo( mPaStream )->outputLatency;
     double const bufferLatency = mFramesWriteToBufferInCallback / mSampleRate;
     double const bytesPerSec = mSampleRate * Pa_GetSampleSize( mSampleFormat ) * mChannel;
-    double const playtime = mConsumedBytes / bytesPerSec;
+    double const playtime = (double)mConsumedBytes / (double)bytesPerSec;
     return playtime - deviceLatency - bufferLatency;
 }
 
@@ -229,9 +229,9 @@ double AudioPlayer::getPlaySec() const
                 *out++ = b;
                 ctx->mStart = ctx->getNextIndex( ctx->mStart );
                 ctx->mConsumedBytes += 1;
-                ++ctx->mPlayByteCount;
+                ctx->mPlayByteCount += 1;
             }
-            ++ctx->mFramesWriteToBufferInCallback;
+            ctx->mFramesWriteToBufferInCallback += 1;
         }
         else
         {
