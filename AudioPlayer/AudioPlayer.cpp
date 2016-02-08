@@ -13,6 +13,8 @@
     #define LOG DEBUG()
 #endif
 
+#define uint8_t char
+
 /* static */ bool AudioPlayer::sIsInit = false;
 
 AudioPlayer::AudioPlayer
@@ -33,10 +35,9 @@ AudioPlayer::AudioPlayer
     mStreamBuffer = (char*)malloc( mBufferSize );
     resetBufferInfo();
 
-    PaError err = paNoError;
+    LOG << "open stream, sample format:" << mSampleFormat << endl;
 
-    LOG << "aSampleFormat:" << aSampleFormat << ", mSampleFormat:" << mSampleFormat << endl;
-
+    PaError err;
     err = Pa_OpenDefaultStream( &mPaStream,
                                 0,                              /* no input channels */
                                 mChannel,
@@ -50,7 +51,7 @@ AudioPlayer::AudioPlayer
         assert(false);
     }
 
-    memset( &mCallbackContext, 0, sizeof( struct CallbackContext ) );
+    memset( &mCBCtx, 0, sizeof( struct CallbackContext ) );
 }
 
 void AudioPlayer::resetBufferInfo()
@@ -62,6 +63,11 @@ void AudioPlayer::resetBufferInfo()
     mWriteByteCount = 0;
     mFramesWriteToBufferInCallback = 0;
     mConsumedBytes = 0;
+}
+
+void AudioPlayer::fillTestSample()
+{
+    fillDefaultSample();
 }
 
 void AudioPlayer::fillDefaultSample()
@@ -78,14 +84,13 @@ void AudioPlayer::fillDefaultSample()
         default :       ratio = 0x7fff;     sampleSize = 2;  break; // int16 is popular sample format;
     }
 
-    /*
-    printf( "ratio = %lf\n", ratio );
-    printf( "sizeof(short) = %u\n", sizeof(short) );
-    printf( "mSampleFormat = %d\n", mSampleFormat );
-    */
+    assert(sizeof(short)==2);
+    // printf( "ratio = %lf\n", ratio );
+    // printf( "mSampleFormat = %d\n", mSampleFormat );
 
     double sampleValue = 0.0;
-    for ( int i = 0; i < mBufferSize / mChannel / sampleSize; ++i )
+    int sampleCnt = mBufferSize / mChannel / sampleSize;
+    for ( int i = 0; i < sampleCnt; ++i )
     {
         for ( int j = 0; j < mChannel; ++j )
         {
@@ -176,14 +181,12 @@ AudioPlayer::~AudioPlayer()
 void AudioPlayer::play()
 {
     PaError err = Pa_StartStream( mPaStream );
-    // printf( "in play err=%d\n", err);
     assert( err == paNoError );
 }
 
 void AudioPlayer::stop()
 {
     PaError err = Pa_StopStream( mPaStream );
-    // printf( "in stop err=%d\n", err);
     assert( err == paNoError );
     resetBufferInfo();
 }
@@ -199,37 +202,36 @@ double AudioPlayer::getPlaySec() const
 
 /* static */ int AudioPlayer::callback
     (
-    const void *inputBuffer,
-    void *outputBuffer,
+    const void *inBuf,
+    void *outBuf,
     unsigned long framesPerBuffer,
     const PaStreamCallbackTimeInfo* timeInfo,
     PaStreamCallbackFlags statusFlags,
     void *userData
     )
 {
-    AudioPlayer * context = (AudioPlayer*)userData;
-    int const sampleBytes = Pa_GetSampleSize( context->mSampleFormat );
+    AudioPlayer * ctx = (AudioPlayer*)userData;
+    int const sampleBytes = Pa_GetSampleSize( ctx->mSampleFormat );
 
-    char *out = (char*)outputBuffer;
-    (void) inputBuffer; /* Prevent unused variable warning. */
+    char *out = (char*)outBuf;
+    (void) inBuf;       /* Prevent unused variable warning. */
     (void) timeInfo;    /* Prevent unused variable warning. */
 
-    context->mFramesWriteToBufferInCallback = 0;
-    // printf( "frames per buffer=%u\n", framesPerBuffer );
+    ctx->mFramesWriteToBufferInCallback = 0;
     for( int i = 0; i < framesPerBuffer; ++i )
     {
-        int const frameByteCount = context->mChannel * sampleBytes;
-        if ( context->mWriteByteCount >= context->mPlayByteCount + frameByteCount )
+        int const frameByteCount = ctx->mChannel * sampleBytes;
+        if ( ctx->mWriteByteCount >= ctx->mPlayByteCount + frameByteCount )
         {
             for ( int j = 0; j < frameByteCount; ++j )
             {
-                char playingByte = context->mStreamBuffer[context->mStart];
-                *out++ = playingByte;
-                context->mStart = context->getNextIndex( context->mStart );
-                context->mConsumedBytes += 1;
-                ++context->mPlayByteCount;
+                uint8_t b = ctx->mStreamBuffer[ctx->mStart];
+                *out++ = b;
+                ctx->mStart = ctx->getNextIndex( ctx->mStart );
+                ctx->mConsumedBytes += 1;
+                ++ctx->mPlayByteCount;
             }
-            ++context->mFramesWriteToBufferInCallback;
+            ++ctx->mFramesWriteToBufferInCallback;
         }
         else
         {
@@ -245,10 +247,10 @@ double AudioPlayer::getPlaySec() const
 
 void AudioPlayer::recordStatusFlags( PaStreamCallbackFlags flags )
 {
-    mCallbackContext.mCount += 1;
-    if( flags & paOutputUnderflow ) mCallbackContext.mOutputUnderflowCount += 1;
-    if( flags & paOutputOverflow )  mCallbackContext.mOutputOverflowCount += 1;
-    if( flags & paPrimingOutput )   mCallbackContext.mPrimingCount += 1;
+    mCBCtx.mCount += 1;
+    if( flags & paOutputUnderflow ) mCBCtx.mOutputUnderflowCount += 1;
+    if( flags & paOutputOverflow )  mCBCtx.mOutputOverflowCount += 1;
+    if( flags & paPrimingOutput )   mCBCtx.mPrimingCount += 1;
 }
 
 PaSampleFormat AudioPlayer::getPaSampleFormat( SampleFormat aSampleFormat ) const
@@ -310,8 +312,8 @@ int AudioPlayer::getAvailableSize() const
 
 void AudioPlayer::dumpCallbackContext() const
 {
-    printf( "count = %d\n", mCallbackContext.mCount );
-    printf( "output underflow count = %d\n", mCallbackContext.mOutputUnderflowCount );
-    printf( "output overflow count = %d\n", mCallbackContext.mOutputOverflowCount );
-    printf( "priming count = %d\n", mCallbackContext.mPrimingCount );
+    printf( "count = %d\n", mCBCtx.mCount );
+    printf( "output underflow count = %d\n", mCBCtx.mOutputUnderflowCount );
+    printf( "output overflow count = %d\n", mCBCtx.mOutputOverflowCount );
+    printf( "priming count = %d\n", mCBCtx.mPrimingCount );
 }

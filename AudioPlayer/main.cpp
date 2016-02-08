@@ -17,13 +17,14 @@ int main()
     printf( "file bytes read: %d\n", readBytes );
     assert( feof( inputFile ) );
 
-    if (0) {
+    int test_mode = 1;
+    if (test_mode == 0) {
         AudioPlayer::init();
         AudioPlayer audioPlayer( 2, AudioPlayer::Int16, 44100 );
         audioPlayer.pushStream( data, readBytes );
         audioPlayer.play();
         Pa_Sleep(15000);
-    } else {
+    } else if (test_mode == 1) {
         AudioPlayer::init();
         AudioPlayer audioPlayer( 2, AudioPlayer::Int16, 44100 );
         Pa_Sleep(1000);
@@ -35,6 +36,17 @@ int main()
             cout << "getPlaySec " << audioPlayer.getPlaySec() << endl;
         }
         Pa_Sleep(15000);
+    } else if (test_mode == 2) {
+        AudioPlayer::init();
+        AudioPlayer audioPlayer( 2, AudioPlayer::Int16, 44100 );
+        Pa_Sleep(1000);
+        for ( int i = 0; i < 100; i++ ) {
+            audioPlayer.fillTestSample();
+            if ( i == 10 ) audioPlayer.play();
+            Pa_Sleep(50);
+            cout << "getPlaySec " << audioPlayer.getPlaySec() << endl;
+        }
+        Pa_Sleep(5000);
     }
 
     free(data);

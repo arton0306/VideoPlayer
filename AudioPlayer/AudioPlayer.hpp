@@ -36,6 +36,7 @@ public:
     void play();
     void stop();
     double getPlaySec() const;
+    void fillTestSample();
 
 private:
     static bool sIsInit;
@@ -83,7 +84,7 @@ private:
         int mOutputUnderflowCount;
         int mOutputOverflowCount;
         int mPrimingCount;
-    } mCallbackContext;
+    } mCBCtx;
 
     // debug info, we will check the mPlayStream and mWriteStream is the same
     struct DebugBuffer
