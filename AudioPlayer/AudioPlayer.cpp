@@ -3,6 +3,7 @@
 #include <cassert>
 #include <cstring>
 #include "AudioPlayer.hpp"
+#include "CircularBuffer.hpp"
 
 #ifdef AudioPlayerTest
     #include <iostream>
@@ -13,16 +14,13 @@
     #define LOG DEBUG()
 #endif
 
-#define uint8_t char
-
 /* static */ bool AudioPlayer::sIsInit = false;
 
 AudioPlayer::AudioPlayer
 (
     int aChannel,
     SampleFormat aSampleFormat,
-    double aSampleRate,
-    int aDebugSize
+    double aSampleRate
 )
 {
     assert( sIsInit );
@@ -31,8 +29,7 @@ AudioPlayer::AudioPlayer
     mSampleFormat = getPaSampleFormat( aSampleFormat );
     mSampleRate = aSampleRate;
 
-    mBufferSize = 32 * 1024;
-    mStreamBuffer = (char*)malloc( mBufferSize );
+    mBuffer = new CirBuf(64*1024);
     resetBufferInfo();
 
     LOG << "open stream, sample format:" << mSampleFormat << endl;
@@ -54,12 +51,22 @@ AudioPlayer::AudioPlayer
     memset( &mCBCtx, 0, sizeof( struct CallbackContext ) );
 }
 
+AudioPlayer::~AudioPlayer()
+{
+    PaError err = Pa_CloseStream( mPaStream );
+    assert( err == paNoError );
+
+    delete(mBuffer);
+    printf("~AudioPlayer\n");
+}
+
+int AudioPlayer::pushStream(char const * buf, int len)
+{
+    return mBuffer->addData(buf, len);
+}
+
 void AudioPlayer::resetBufferInfo()
 {
-    // fillDefaultSample();
-    mStart = 0;
-    mEnd = 0;
-    mWriteByteCount = 0;
     mFramesWriteToBufferInCallback = 0;
     mConsumedBytes = 0;
 }
@@ -71,6 +78,7 @@ void AudioPlayer::fillTestSample()
 
 void AudioPlayer::fillDefaultSample()
 {
+    /*
     double ratio = 0;
     int sampleSize = 0;
 
@@ -93,7 +101,6 @@ void AudioPlayer::fillDefaultSample()
     {
         for ( int j = 0; j < mChannel; ++j )
         {
-            //mStreamBuffer[i * mChannel + j] = sampleValue * ratio;
             double fitRatio = sampleValue * ratio;
             int destPos = i * mChannel * sampleSize + j * sampleSize;
             switch ( mSampleFormat )
@@ -105,11 +112,10 @@ void AudioPlayer::fillDefaultSample()
                 default :   break; // we don't know how to init it with default sample
             }
         }
-        // Generate simple sawtooth phaser that ranges between -1.0 and 1.0.
         sampleValue += 0.01f;
-        // When signal reaches top, drop back down.
         if( sampleValue >= 1.0f ) sampleValue -= 2.0f;
     }
+    */
 }
 
 void AudioPlayer::initDebugBuffer( int aDebugSize )
@@ -122,25 +128,6 @@ void AudioPlayer::initDebugBuffer( int aDebugSize )
     memset( &mDebugBuffer.mWriteStream[0], 0, aDebugSize );
     mDebugBuffer.mPlayStreamIndex = 0;
     mDebugBuffer.mWriteStreamIndex = 0;
-    */
-}
-
-AudioPlayer::~AudioPlayer()
-{
-    PaError err = Pa_CloseStream( mPaStream );
-    assert( err == paNoError );    
-
-    printf("~AudioPlayer\n");
-
-    /*
-    FILE * f = fopen( "portaudio_playing.raw", "wb" );
-    for ( int i = 0; i < mDebugBuffer.mDebugSize; ++i )
-        fwrite(&mDebugBuffer.mPlayStream[i], 1, 1, f);
-    fclose(f);
-
-    free( mStreamBuffer ); mStreamBuffer = 0;
-    free( mDebugBuffer.mPlayStream ); mDebugBuffer.mPlayStream = 0;
-    free( mDebugBuffer.mWriteStream ); mDebugBuffer.mWriteStream = 0;
     */
 }
 
@@ -217,26 +204,17 @@ double AudioPlayer::getPlaySec() const
     (void) timeInfo;    /* Prevent unused variable warning. */
 
     ctx->mFramesWriteToBufferInCallback = 0;
-    for( int i = 0; i < framesPerBuffer; ++i )
-    {
-        int const frameByteCount = ctx->mChannel * sampleBytes;
-        if ( ctx->mWriteByteCount >= ctx->mConsumedBytes + frameByteCount )
-        {
-            for ( int j = 0; j < frameByteCount; ++j )
-            {
-                uint8_t b = ctx->mStreamBuffer[ctx->mStart];
-                *out++ = b;
-                ctx->mStart = ctx->getNextIndex( ctx->mStart );
-                ctx->mConsumedBytes += 1;
+    int const frameBytes = ctx->mChannel * sampleBytes;
+    for( int i = 0; i < framesPerBuffer; ++i ) {
+        if ( ctx->mBuffer->getUsed() >= frameBytes ) {
+            for ( int j = 0; j < frameBytes; ++j ) {
+                *out++ = ctx->mBuffer->pop();
             }
+            ctx->mConsumedBytes += frameBytes;
             ctx->mFramesWriteToBufferInCallback += 1;
-        }
-        else
-        {
-            for ( int j = 0; j < frameByteCount; ++j )
-            {
-                *out++ = 0;
-            }
+        } else {
+            memset(out, 0, frameBytes);
+            out += frameBytes;
         }
     }
 
@@ -265,47 +243,6 @@ PaSampleFormat AudioPlayer::getPaSampleFormat( SampleFormat aSampleFormat ) cons
             assert( false );
             return Error;
     }
-}
-
-// return consume size
-int AudioPlayer::pushStream(
-    char const * aInputStream,
-    int aInputSize )
-{
-    int consume = 0;
-
-    // we must save it as local because the callback will change the mStart in interrupt
-    int beforeStart = getPreviousIndex( mStart );
-    for(;
-        mEnd != beforeStart && consume < aInputSize;
-        mEnd = getNextIndex( mEnd ), consume += 1 )
-    {
-        memcpy( &mStreamBuffer[mEnd], &aInputStream[consume], 1 );
-        ++mWriteByteCount;
-    }
-
-    return consume;
-}
-
-int AudioPlayer::getPreviousIndex( int pos ) const
-{
-    return ( pos + mBufferSize - 1 ) % mBufferSize;
-}
-
-int AudioPlayer::getNextIndex( int pos ) const
-{
-    return ( pos + 1 ) % mBufferSize;
-}
-
-int AudioPlayer::getUsedSize() const
-{
-    return ( mEnd + mBufferSize - mStart ) % mBufferSize;
-}
-
-int AudioPlayer::getAvailableSize() const
-{
-    // mEnd is always empty, so minus 1
-    return mBufferSize - getUsedSize() - 1;
 }
 
 void AudioPlayer::dumpCallbackContext() const

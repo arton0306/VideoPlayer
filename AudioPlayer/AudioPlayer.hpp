@@ -3,6 +3,8 @@
 
 #include "portaudio.h"
 
+class CirBuf;
+
 class AudioPlayer
 {
 public:
@@ -24,14 +26,13 @@ public:
     AudioPlayer(
         int aChannel,
         SampleFormat aSampleFormat,
-        double aSampleRate,
-        int aDebugSize = 1 * 1024 * 1024
+        double aSampleRate
         );
     ~AudioPlayer();
-    int pushStream
-        (
-        char const * aInputStream,  /* input audio stream */
-        int aInputSize /* input audio stream size */
+
+    int pushStream(
+        char const * buf,  /* input audio stream */
+        int len            /* input audio stream size */
         );
     void play();
     void stop();
@@ -42,10 +43,6 @@ private:
     static bool sIsInit;
     void resetBufferInfo();
     PaSampleFormat getPaSampleFormat( SampleFormat aSampleFormat ) const;
-    int getPreviousIndex( int pos ) const;
-    int getNextIndex( int pos ) const;
-    int getUsedSize() const;
-    int getAvailableSize() const;
     void fillDefaultSample(); // for debug
     void initDebugBuffer( int aDebugSize ); // for debug
     void dumpCallbackContext() const;
@@ -65,15 +62,10 @@ private:
     PaSampleFormat mSampleFormat;
     double mSampleRate;
 
-    // TODO: check volatile is needed or not
     // audio buffer data
-    char * mStreamBuffer; // audio buffer
-    int mBufferSize;      // audio buffer size
-    int mStart;           // the callback will read from the index in audio buffer
-    int mEnd;             // the index where the users push from, the element on this index is always empty
-    volatile long long mWriteByteCount;
+    CirBuf *mBuffer;
     unsigned long mFramesWriteToBufferInCallback;
-    int mConsumedBytes;   // we use this to estimate the playing time
+    long long mConsumedBytes;   // we use this to estimate the playing time
 
     // port audio data
     PaStream * mPaStream;
