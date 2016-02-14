@@ -30,7 +30,8 @@ SOURCES += \
     # tools/videoinfodumper/libav_probe.c \
     # tools/wavheader/MakeWavHeader.cpp \
     # libav_using.c
-    DecodeWorker.cpp
+    DecodeWorker.cpp \
+    AudioPlayer/CircularBuffer.cpp
 
 HEADERS += \
     VideoPlayer.hpp \
@@ -148,7 +149,8 @@ HEADERS += \
     3rdparty/soundtouch/include/SoundTouch.h \
     3rdparty/soundtouch/include/soundtouch_config.h \
     3rdparty/soundtouch/include/STTypes.h \
-    DecodeWorker.hpp
+    DecodeWorker.hpp \
+    AudioPlayer/CircularBuffer.hpp
 
 # AudioPlayer
 SOURCES += \

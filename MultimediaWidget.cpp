@@ -25,10 +25,10 @@ MultimediaWidget::MultimediaWidget(QWidget *parent)
     mVideoCanvas = new QGLCanvas( this );
     mMainLayout->addWidget( mVideoCanvas );
 
-    if (1) {
-        QThread * libavThread = new QThread;
-        mLibavWorker->moveToThread( libavThread );
-        libavThread->start();
+    QThread * libavThread = new QThread;
+    mLibavWorker->moveToThread( libavThread );
+    libavThread->start();
+    if (0) {
         play( QString( "./lulu.mp4" ) );
         //play( QString( "./1000km.mpg" ) );
     }
